@@ -1,0 +1,332 @@
+\documentclass[12pt]{article}
+
+%\usepackage{draftwatermark}
+
+\usepackage{../lawofforms/lawofforms}
+\usepackage{url}
+
+
+% Aligned labels in a description environment
+\newenvironment{Description}[1]{%
+	\begin{list}{nothing}{\setlength{\leftmargin}{#1}
+			\setlength{\labelwidth}{\leftmargin}\setlength{\labelsep}{1mm}}}
+	{\end{list}}
+
+\newcommand{\BS}{\texttt{\symbol{`\\}}}
+\newcommand{\Macro}[1]{\texttt{\BS#1}}
+\newcommand{\Variable}[1]{\textnormal{\textit{\(\langle\)#1\,\(\rangle\)}}}
+\newcommand{\Parameter}[1]{\texttt{\symbol{`\{}#1\symbol{`\}}}}
+
+\newcommand{\FormatTeXMacro}[1]{\Macro{#1}\hfill :}
+
+\usepackage[toc,page]{appendix}
+
+\usepackage{lmodern}
+\usepackage{amssymb,amsmath}
+\usepackage{ifxetex,ifluatex}
+\usepackage{fixltx2e} % provides \textsubscript
+\ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0 % if pdftex
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+\else % if luatex or xelatex
+  \ifxetex
+    \usepackage{mathspec}
+  \else
+    \usepackage{fontspec}
+  \fi
+  \defaultfontfeatures{Ligatures=TeX,Scale=MatchLowercase}
+\fi
+% use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+% use microtype if available
+\IfFileExists{microtype.sty}{%
+\usepackage{microtype}
+\UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\usepackage[colorlinks]{hyperref}
+\hypersetup{unicode=true,
+            pdftitle={Project Report – Generating Layouts for Reentry Forms},
+            pdfauthor={Thomas Schmidt},
+            pdfborder={0 0 0},
+            breaklinks=true}
+\urlstyle{same}  % don't use monospace font for urls
+\usepackage{listings}
+%\IfFileExists{parskip.sty}{%
+%\usepackage{parskip}
+%}{% else
+%\setlength{\parindent}{0pt}
+%\setlength{\parskip}{6pt plus 2pt minus 1pt}
+%}
+%\setlength{\emergencystretch}{3em}  % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{5}
+% Redefines (sub)paragraphs to behave more like sections
+\ifx\paragraph\undefined\else
+\let\oldparagraph\paragraph
+\renewcommand{\paragraph}[1]{\oldparagraph{#1}\mbox{}}
+\fi
+\ifx\subparagraph\undefined\else
+\let\oldsubparagraph\subparagraph
+\renewcommand{\subparagraph}[1]{\oldsubparagraph{#1}\mbox{}}
+\fi
+%%% Special LaTeX headers
+%
+% Remove and edit as desired. Simply serves as an example.
+% Here, reduce excessive use of whitespace a little bit.
+
+\usepackage{titling}
+\setlength{\droptitle}{-1.5in}
+\parskip.5ex plus.5ex minus0.25ex
+%\usepackage{setspace}
+%\doublespacing
+\usepackage{eurosym}
+\usepackage{caption}
+\usepackage{graphicx}
+
+\usepackage{listings}
+\usepackage{color}
+
+\definecolor{mygreen}{rgb}{0,0.6,0}
+\definecolor{mygray}{rgb}{0.5,0.5,0.5}
+\definecolor{mymauve}{rgb}{0.58,0,0.82}
+
+\lstset{ %
+  language=TeX,
+  backgroundcolor=\color{white},   % choose the background color; you must add \usepackage{color} or \usepackage{xcolor}
+  basicstyle=\ttfamily,        % the size of the fonts that are used for the code
+  breakatwhitespace=false,         % sets if automatic breaks should only happen at whitespace
+  breaklines=true,                 % sets automatic line breaking
+  captionpos=b,                    % sets the caption-position to bottom
+  commentstyle=\color{mygreen},    % comment style
+  escapeinside={\%*}{*)},          % if you want to add LaTeX within your code
+  extendedchars=true,              % lets you use non-ASCII characters; for 8-bits encodings only, does not work with UTF-8
+  frame=single,	                   % adds a frame around the code
+  keepspaces=true,                 % keeps spaces in text, useful for keeping indentation of code (possibly needs columns=flexible)
+  keywordstyle=\color{blue},       % keyword style
+  language=Octave,                 % the language of the code
+  otherkeywords={*,...},           % if you want to add more keywords to the set
+  numbers=left,                    % where to put the line-numbers; possible values are (none, left, right)
+  numbersep=5pt,                   % how far the line-numbers are from the code
+  numberstyle=\tiny\color{mygray}, % the style that is used for the line-numbers
+  rulecolor=\color{black},         % if not set, the frame-color may be changed on line-breaks within not-black text (e.g. comments (green here))
+  showspaces=false,                % show space everywhere adding particular underscores; it overrides 'showstringspaces'
+  showstringspaces=false,          % underline spaces within strings only
+  showtabs=false,                  % show tabs within strings adding particular underscores
+  stepnumber=1,                    % the step between two line-numbers. If it's 1, each line will be numbered
+  stringstyle=\color{mymauve},     % string literal style
+  tabsize=2,	                   % sets default tabsize to 2 spaces
+}
+
+
+\title{The `\texttt{lawofforms}' package}
+\author{Thomas Schmidt}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}\label{introduction}
+
+This package is an implementation to enable the clean and easy drawing of Laws of Form\cite{LoF} formulas. This document describes the usage of the implemented features, as well as how to extend the package to support new and customised features. This package uses the \texttt{arrayjobx} package\cite{arrayjobx} to store the encoded formulas in an array we called \Macro{orderarray}, through which we then iterate and draw the formulas using the Tikz package\cite{tikz}.
+
+\section{Command reference}\label{commands}
+
+%\texttt{\textbackslash lof}}:
+
+\begin{Description}{4cm}
+	\item[\FormatTeXMacro{lof}] Create a new cross at the current location.
+	
+	Syntax: \Macro{lof\{\textit{content}\}\{\textit{id}\}}
+	
+	Example: \Macro{lof\{\}\{1\}}
+	
+	Remark: By ``content," we mean further, nested forms, since for those nesting purposes it is required to differentiate between nested forms and written text.
+	
+	\item[\FormatTeXMacro{lofc}] Creates a new cross with text at the current location.
+	
+	Syntax: \Macro{lof\{\textit{content}\}\{\textit{text}\}\{\textit{id}\}}
+	
+	Example: \Macro{lof\{\}\{f\}\{1\}}
+	
+	\item[\FormatTeXMacro{re}] Creates a reentry, originating from the given \texttt{id}, at the current location.
+	
+	Syntax: \Macro{re\{\textit{id}\}}
+	
+	Example: \Macro{re\{1\}}
+	
+	\item[\FormatTeXMacro{ren}] Creates a reentry with text, originating from the given \texttt{id}, at the current location.
+	
+	Syntax: \Macro{ren\{\textit{text}\}\{\textit{id}\}}
+	
+	Example: \Macro{ren\{Problem\}\{1\}}
+	
+	Remark: This currently does not support spacing for additional reentries going below this one.
+	
+	\item[\FormatTeXMacro{lawofforms}] Creates a single line equation math environment, in which the above commands can be used.
+	
+	Syntax: \Macro{begin\{lawofforms\} \textit{content} \BS end\{lawofforms\}}
+
+	Example:
+	
+		\Macro{begin\{lawofforms\}
+		f = \BS lofc\{\BS re\{1\}\}\{a\}\{1\}
+	\BS end\{lawofforms\}}
+
+	\item[\FormatTeXMacro{lofinline}] Creates an inline math environment in which the above commands can be used.
+	
+	Syntax: \Macro{begin\{lofinline\} \textit{content} \BS end\{lofinline\}}
+	
+	Example:
+	
+	\Macro{begin\{lofinline\} f = \BS lofc\{\BS re\{1\}\}\{a\}\{1\}\BS end\{lofinline\}}
+	
+	Remark: This also creates a box with appropriate height around the formula, so that it fits with surrounding text.
+\end{Description}
+
+\section{Examples}\label{examples}
+\begin{minipage}[c]{.45\textwidth}
+	\begin{lawofforms}
+		f = \lof{}{1}
+	\end{lawofforms}
+\end{minipage}~~
+\begin{minipage}[c]{.45\textwidth}
+\begin{lstlisting}[language=TeX]
+\begin{lawofforms}
+	f = \lof{}{1}
+\end{lawofforms}
+\end{lstlisting}
+\end{minipage}
+
+
+\begin{minipage}[c]{.45\textwidth}
+	\begin{lawofforms}
+		f = \lofc{}{}{1}
+	\end{lawofforms}
+	
+\end{minipage}~~
+\begin{minipage}[c]{.5\textwidth}
+	\begin{lstlisting}
+	\begin{lawofforms}
+	f = \lofc{}{}{1}
+	\end{lawofforms}
+	\end{lstlisting}
+\end{minipage}
+
+
+\begin{minipage}[c]{.45\textwidth}
+	\begin{lawofforms}
+		f = \lofc{}{a}{1}
+	\end{lawofforms}
+\end{minipage}~~
+\begin{minipage}[c]{.5\textwidth}
+	\begin{lstlisting}
+	\begin{lawofforms}
+	f = \lofc{}{a}{1}
+	\end{lawofforms}
+	\end{lstlisting}
+\end{minipage}
+
+
+\begin{minipage}[c]{.45\textwidth}
+	\begin{lawofforms}
+		f = \lofc{\re{1}}{a}{1}
+	\end{lawofforms}
+\end{minipage}~~
+\begin{minipage}[c]{.5\textwidth}
+	\begin{lstlisting}
+	\begin{lawofforms}
+	f = \lofc{\re{1}}{a}{1}
+	\end{lawofforms}
+	\end{lstlisting}
+\end{minipage}
+
+
+\begin{minipage}[c]{.45\textwidth}
+	\begin{lawofforms}
+		f = \lofc{\lofc{\lofc{\re{2}}{a}{1}\re{3}}{b}{2}}{c}{3}
+	\end{lawofforms}
+\end{minipage}~~
+\begin{minipage}[c]{.5\textwidth}
+	\begin{lstlisting}
+	\begin{lawofforms}
+	f = \lofc{\lofc{\lofc{\re{2}}{a}{1}\re{3}}{b}{2}}{c}{3}
+	\end{lawofforms}
+	\end{lstlisting}
+\end{minipage}
+
+
+\begin{minipage}[c]{.45\textwidth}
+	\begin{lawofforms}
+		\text{ Kultur } = \lofc{\ren{Problem}{2} \lofc{\re{1}}{\text{ x }}{1}}{\text{ Medium }}{2}
+	\end{lawofforms}
+\end{minipage}~~
+\begin{minipage}[c]{.45\textwidth}
+\begin{lstlisting}
+	\begin{lawofforms}
+	\text{ Kultur } = \lofc{\ren{Problem}{2} \lofc{\re{1}}{\text{ x }}{1}}{\text{ Medium }}{2}
+	\end{lawofforms}
+\end{lstlisting}
+\end{minipage}
+
+
+\begin{minipage}[c]{.45\textwidth}
+	This is the start of an example text \begin{lofinline}
+		h_6 = \lofc{\lofc{\lofc{\lofc{\lofc{\lofc{}{h_8}{1}}{h_6}{2}}{h_1}{3}}{h_8}{4}}{a}{5}}{h_2}{6}
+	\end{lofinline} this is the middle of an example text \begin{lofinline}
+		f = \lofc{\lofc{\lofc{\re{2}}{a}{1}\re{3}}{b}{2}}{c}{3}
+	\end{lofinline} this is the end of an example text.
+\end{minipage}~~
+\begin{minipage}[c]{.45\textwidth}
+\begin{lstlisting}
+	This is the start of an example text \begin{lofinline}
+	h_6 = \lofc{\lofc{\lofc{\lofc{\lofc{\lofc{}{h_8}{1}}{h_6}{2}}{h_1}{3}}{h_8}{4}}{a}{5}}{h_2}{6}
+	\end{lofinline} this is the middle of an example text \begin{lofinline}
+	f = \lofc{\lofc{\lofc{\re{2}}{a}{1}\re{3}}{b}{2}}{c}{3}
+	\end{lofinline} this is the end of an example text.
+\end{lstlisting}
+\end{minipage}
+
+\section{Extending features}
+
+To extend this package with additional features, there are several key places in the code where certain features can be added or changed.
+
+The first place to start are the definitions of the actual commands that are used to encode the desired forms, i.e. \Macro{lof}, \Macro{lofc}, \Macro{re}, and \Macro{ren}, and their respective helper functions (see below) that enter corresponding elements into the \Macro{orderarray}. To create a fundamental new feature, one will need to first create the command which will be used in the \Macro{lawofform} environments. This command will then have to set the appropriate \Macro{orderarray} entries, with the following commands:
+
+\begin{Description}{4cm}
+	\item[\FormatTeXMacro{enterOAL}] Creates an entry for the start of a cross in the \Macro{orderarray}.
+	
+	Syntax: \Macro{enterOAL\{\textit{id}\}}
+	
+	\item[\FormatTeXMacro{enterOAR}] Creates an entry for the end of a cross in the \Macro{orderarray}.
+	
+	Syntax: \Macro{enterOAR\{\textit{id}\}}
+	
+	\item[\FormatTeXMacro{enterOAT}] Creates an entry for the text under a cross in the \Macro{orderarray}.
+	
+	Syntax: \Macro{enterOAT\{\textit{id}\}}
+	
+	\item[\FormatTeXMacro{enterOAE}] Creates an entry for a reentry in the \Macro{orderarray}.
+	
+	Syntax: \Macro{enterOAE\{\textit{id}\}}
+	
+	\item[\FormatTeXMacro{enterOAN}] Creates an entry for a reentry with text in the \Macro{orderarray}.
+	
+	Syntax: \Macro{enterOAN\{\textit{id}\}}
+\end{Description}
+
+It is likely that a new feature will require a new type of entry, and therefore an additional \Macro{enterOA} command, in the \Macro{orderarray}. To then implement the new feature, the \Macro{formdraw} command will need to be extended.
+
+Firstly, the \Macro{formdraw} command iterates through the \Macro{orderarray} and creates Tikz nodes according to the type of entry in the \Macro{orderarray}. This loop will need to be extended to account for the new type of \Macro{orderarray} entry and implement the desired behaviour.
+
+If the desired behaviour requires a new type of Tikz node (the types are corresponding to the orderarray entries except for the text), the loop in which we draw the crosses will then have to be extended to account for the new type of node. Note that the loop itself does not iterate over the nodes themselves, but over the indices, i.e. \texttt{id}'s, that were set by hand. In the loop, we draw the cross from the left node of the current index (i.e. \texttt{l<id>}), to the right node of the current index (i.e. \texttt{r<id>}), and then down to the bottom of the line. We then check if there are reentry or reentry-with-text nodes for the current index (i.e. \texttt{e<id>} or \texttt{n<id>}), and then draw the respective path. Additional checks for new types of nodes can be simply implemented with the \Macro{ifnodedefined} helper command. Nodes that have been drawn need to be deleted with the \Macro{aeundefinenode} command at the end of the iteration, so as to free up the name-space for the next use.
+
+If you do not wish to implement a new drawing feature, but simply need to create a new environment in which to use our package, for example a multi-line math environment, you can simply do that by using the \Macro{newenvironment} command, and specifying your desired formatting and environment. Note that it is assumed that our commands are used in a math environment, and that you will have to call the \Macro{formdraw} command at the end of your environment, or whenever you want your form to be drawn. For example in the case of a multi-line math environment, it is likely that you want to call the \Macro{formdraw} command at the end of every line.
+
+\bibliographystyle{acm}
+\bibliography{bibliography}{}
+%
+%\newpage
+%\onecolumn
+
+\end{document}
