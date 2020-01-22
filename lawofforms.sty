@@ -183,7 +183,8 @@
 		}{%false
 		}%
 		\IfStrEq{t}{\firstletter}{%true
-		\checktextarray(\thetextcounter)%
+%		\checktextarray(\thetextcounter)%
+		\checktextarray(\lastletters)%
 		\hspacing\cachedata\hspacing%
 		\stepcounter{textcounter}%
 		}{%false
