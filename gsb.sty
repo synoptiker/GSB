@@ -264,20 +264,20 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % single line equation environment to display LoF formulas
-\newenvironment{lawofforms}{\[}{\formdraw\]}
+\newenvironment{form}{\[}{\formdraw\]}
 
 % for inline use in equation environments, creates a box with appropriate height around the formula, example:
 %	\begin{align}
 %		f = \begin{lofeqn} \loflr{}{a}{}{1} \end{lofeqn}\\
 %		f = \begin{lofeqn} \loflr{}{b}{}{1} \end{lofeqn}
 %	\end{align}
-\newenvironment{lofeqn}{}{%
+\newenvironment{formeqn}{}{%
 	\setlength{\myboxheight}{\theheightcounter em}
 	\setlength{\myboxdepth}{\thedepthcounter em}
 	\raisebox{0pt}[0.2\myboxheight][0.4\myboxdepth]{\formdraw}}
 
 % inline math environment to display inline LoF formulas, creates a box with appropriate height around the formula
-\newenvironment{lofinline}{$}{$%
+\newenvironment{forminline}{$}{$%
 	\setlength{\myboxheight}{\theheightcounter em}
 	\setlength{\myboxdepth}{\thedepthcounter em}
 	\raisebox{0pt}[0.2\myboxheight][0.4\myboxdepth]{$\formdraw$}}
