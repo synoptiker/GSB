@@ -4,6 +4,8 @@
 \usepackage{xstring}
 \usepackage{arrayjobx}
 
+\usepackage{calc}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% INTERNAL CONSTANTS AND COUNTERS %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -16,6 +18,11 @@
 \newlength{\myboxheight}
 \newlength{\myboxdepth}
 
+% counts the indices used to identify elements, starts with 1, and therefore is always one more than the acutal number,
+% this is done so we can iterate in a loop as long as i < indexcount, since =< is not possible with our whiledo command
+\newcounter{indexcount}
+\setcounter{indexcount}{1}
+
 % counters used to determine height and depth for inline spacing (in \defaultspace)
 \newcounter{heightcounter}
 % standard height of a form (5 * \defaultspace = 1em)
@@ -23,11 +30,15 @@
 \newcounter{depthcounter}
 \setcounter{depthcounter}{0}
 
-% counter used in loops, needs to be (re-)set before usage
-\newcounter{loop}
-
 % counter to keep track how many text elements have been printed
 \newcounter{textcounter}
+
+% counter used for arithmetics in the reentrycountarray manipulation
+\newcounter{RCAhelper}
+
+% counters used in loops, needs to be (re-)set before usage
+\newcounter{loop}
+\newcounter{moop}
 
 % counter used in a while loop
 \newcounter{until}
@@ -39,6 +50,8 @@
 % array that stores the order of each form element, i.e. start (l<index>), end (r<index>), re-rentry (r<index>),
 % text (t<index>), re-rentry with text (n<index>) 
 \newarray\orderarray
+% counting the length of orderarray, starts with 1, and therefore is always one more than the acutal length,
+% this is done so we can iterate in a loop as long as i < indexcount, since =< is not possible with our whiledo command
 \newcounter{orderarraycount}
 \setcounter{orderarraycount}{1}
 
@@ -52,20 +65,64 @@
 % array to store text that is supposed to be written under a re-rentry
 \newarray\rentextarray
 
+%
+%\newarray\crossheightarray
+%\newarray\crossheightarrayindex
+%\newcounter{crossheightcount}
+%\setcounter{crossheightcount}{0}
+%\newcounter{crossheightarrayindexcount}
+%\setcounter{crossheightarrayindexcount}{1}
+
+% array used to count how many re-entries there are for each index, used for multi-re-entry feature
+\newarray\reentrycountarray
+% array used to keep track of how many re-entries of the same index have been set, used for multi-re-entry feature
+\newarray\reentrynamearray
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% INTERNAL HELPER COMMANDS TO MANUPULATE ARRAYS %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\newcommand\enterCHA[1]{%
+%	CHC[\arabic{crossheightcount}]
+	[#1,\thecrossheightcount]
+	\expandarrayelementtrue
+	\crossheightarray(#1)={\the\value{crossheightcount}}%
+	\expandarrayelementfalse
+	\stepcounter{crossheightcount}%
+%	\crossheightarray(#1)
+}
+
 % commands to enter respective form elements into the orderarray
-\newcommand\enterOAL[1]{\orderarray(\theorderarraycount)={l#1}\stepcounter{orderarraycount}}
-\newcommand\enterOAR[1]{\orderarray(\theorderarraycount)={r#1}\stepcounter{orderarraycount}}
+\newcommand\enterOAL[1]{\orderarray(\theorderarraycount)={l#1}\stepcounter{orderarraycount}%
+%\enterCHA{#1}
+}
+\newcommand\enterOAR[1]{\orderarray(\theorderarraycount)={r#1}\stepcounter{orderarraycount}%
+%	\addtocounter{crossheightcount}{-1}
+}
 \newcommand\enterOAT[1]{\orderarray(\theorderarraycount)={t#1}\stepcounter{orderarraycount}}
-\newcommand\enterOAE[1]{\orderarray(\theorderarraycount)={e#1}\stepcounter{orderarraycount}}
+\newcommand\enterOAE[1]{\orderarray(\theorderarraycount)={e#1}\stepcounter{orderarraycount}%
+	\stepRCA{#1}}
 \newcommand\enterOAN[1]{\orderarray(\theorderarraycount)={n#1}\stepcounter{orderarraycount}}
 
 % command to enter text into the textarray
 \newcommand\enterTA[2]{\textarray(#2)={#1}%
 	\textarrayindex(\thetextarrayindexcount)={#2}\stepcounter{textarrayindexcount}}
+
+% initializes or increments RCA entries of the corresponding index
+\newcommand\stepRCA[1]{%
+	\expandarrayelementtrue%
+	\checkreentrycountarray(#1)%
+	\ifemptydata%then
+%		\ifemptydata
+		\reentrycountarray(#1)={1}
+		\reentrynamearray(#1)={0}
+	\else
+		\setcounter{RCAhelper}{\cachedata}
+		\stepcounter{RCAhelper}
+		\reentrycountarray(#1)={\theRCAhelper}
+	\fi
+	\expandarrayelementfalse%
+}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% USER COMMANDS TO ENCODE FORMS %%%
@@ -73,16 +130,19 @@
 
 % command to place the start and end of a cross without text, usage: \lof{<content>}{<index>}
 \newcommand\lof[2]{\enterOAL{#2}#1\enterOAR{#2}%
-	\stepcounter{heightcounter}}
+	\stepcounter{heightcounter}%
+	\stepcounter{indexcount}}
 
 % command to place the start and end of a cross with text, usage: \lofc{<content>}{<text>}{<index>}
 \newcommand\lofc[3]{\enterOAL{#3}#1\enterTA{#2}{#3}\enterOAT{#3}\enterOAR{#3}%
-	\stepcounter{heightcounter}}
+	\stepcounter{heightcounter}%
+	\stepcounter{indexcount}}
 
 % command to place the start and end of a cross with text, including the possibily of placing crosses or re-entries to
 % the right side of the text usage: \lofc{<content>}{<text>}{<content>}{<index>}
 \newcommand\loflr[4]{\enterOAL{#4}#1\enterTA{#2}{#4}\enterOAT{#4}#3\enterOAR{#4}%
-\stepcounter{heightcounter}}
+	\stepcounter{heightcounter}%
+	\stepcounter{indexcount}}
 
 % command to place plain text, without a new cross, usage: \loftext{<text>}{<index>}
 \newcommand\loftext[2]{\enterTA{#1}{#2}\enterOAT{#2}}
@@ -99,19 +159,20 @@
 
 % testing function that prints out the content of orderarray
 \newcommand\printOA{%
-	printOA:\\
+	\footnote{\text{printOA: }
 	\setcounter{loop}{1}
 	\whiledo{\value{loop} < \theorderarraycount}%
 	{%
 		\orderarray(\theloop)
 		\stepcounter{loop}%
 	}
-	\setcounter{loop}{0}	
+	\setcounter{loop}{0}
+	}
 }
 
 % testing function that prints out the content of textarray
 \newcommand\printTA{%
-	printTA:
+	\footnote{\text{printTA: }
 	\setcounter{loop}{1}
 	\whiledo{\value{loop} < \thetextarrayindexcount}%
 	{%
@@ -120,6 +181,47 @@
 		\stepcounter{loop}%
 	}
 	\setcounter{loop}{0}
+	}
+}
+
+% testing function that prints out the content of crossheightarray
+\newcommand\printCHA[1]{%
+printCHA:
+\setcounter{loop}{1}
+\whiledo{\value{loop} < #1}%
+{%
+	\crossheightarray(\theloop)
+	\stepcounter{loop}%
+}
+\setcounter{loop}{0}
+}
+
+% testing function that prints out the content of reentrycountarray
+\newcommand\printRCA{%
+	\footnote{\text{printRCA: }
+	\setcounter{loop}{1}
+	\whiledo{\value{loop} < \theindexcount}%
+	{%
+		\checkreentrycountarray(\theloop)
+		\text{(}\theloop\text{, }\cachedata\text{)}
+		\stepcounter{loop}%
+	}
+	\setcounter{loop}{1}
+	}
+}
+
+% testing function that prints out the content of reentrynamearray
+\newcommand\printRNA{%
+	\footnote{\text{printRNA: }
+		\setcounter{loop}{1}
+		\whiledo{\value{loop} < \theindexcount}%
+		{%
+			\checkreentrynamearray(\theloop)
+			\text{(}\theloop\text{, }\cachedata\text{)}
+			\stepcounter{loop}%
+		}
+		\setcounter{loop}{1}
+	}
 }
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -179,7 +281,13 @@
 		}{%false
 		}%
 		\IfStrEq{e}{\firstletter}{%true
-			\ncoord[0,\defaultspace]{e\lastletters}\hspacing%
+			\checkreentrynamearray(\lastletters)
+			\setcounter{RCAhelper}{\cachedata}
+			\stepcounter{RCAhelper}
+			\expandarrayelementtrue
+			\reentrynamearray(\lastletters)={\theRCAhelper}
+			\expandarrayelementfalse
+			\ncoord[0,\defaultspace]{e\lastletters\theRCAhelper}\hspacing%
 		}{%false
 		}%
 		\IfStrEq{t}{\firstletter}{%true
@@ -217,11 +325,16 @@
 			\draw[-] ([yshift=(\theloop-1) * \defaultspace]l\theloop)
 			-| ([yshift=(\theloop-1) * \defaultspace]r\theloop)
 			-| ++([yshift=(\theloop-1) * -\defaultspace]0em,0em);
-			\ifnodedefined{e\theloop}{
-				\draw[-] (r\theloop)
-				-| ++(0,\theloop * -\defaultspace)
-				-| ++(0,-1.0em) -| (e\theloop)
-				;
+			\ifnodedefined{e\theloop1}{
+				\setcounter{moop}{0}
+				\checkreentrycountarray(\theloop)
+				\whiledo{\value{moop} < \cachedata}{%
+					\stepcounter{moop}
+					\draw[-] (r\theloop)
+					-| ++(0,\theloop * -\defaultspace)
+					-| ++(0,-1.0em) -| (e\theloop\themoop)
+					;
+				}
 			}{
 				\draw[-] (r\theloop)
 				-| ++(0,-\defaultspace)
@@ -236,7 +349,14 @@
 			}{}
 			\aeundefinenode{l\theloop}
 			\aeundefinenode{r\theloop}
-			\aeundefinenode{e\theloop}
+			\ifnodedefined{e\theloop1}{%then
+				\setcounter{moop}{0}
+				\checkreentrycountarray(\theloop)
+				\whiledo{\value{moop} < \cachedata}{%
+					\stepcounter{moop}
+					\aeundefinenode{e\theloop\themoop}
+				}%
+			}
 			\aeundefinenode{n\theloop}
 %
 			% Step up the counter and see if there exists a left node for the current index, if not exit the loop
@@ -251,10 +371,17 @@
 \clrarray{textarrayindex}()
 \clrarray{textgap}()
 \clrarray{orderarray}()
+% I don't know why this is necessary here, but not in with any other arrays...
+\setcounter{loop}{1}
+\whiledo{\value{loop} < \theindexcount}{%
+	\clrarray{reentrycountarray}(\theloop)
+	\stepcounter{loop}
+}
 \setcounter{textarrayindexcount}{1}
 \setcounter{orderarraycount}{1}
 \setcounter{loop}{1}
 \setcounter{textcounter}{1}
+\setcounter{indexcount}{1}
 \setcounter{heightcounter}{5}
 \setcounter{depthcounter}{0}
 }

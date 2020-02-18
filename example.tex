@@ -1,7 +1,25 @@
-\documentclass[preview]{standalone}
+\documentclass{article}
 \usepackage{gsb}
 
 \begin{document}
+
+\begin{form}
+	f = \lof{
+			\lof{
+				\lof{
+					\loflr{
+						\lof{
+							\lof{
+								\lof{
+									\loflr{\re{8}}{a}{}{1}\re{6}
+									}{2}\re{1}
+								}{3}\re{8}
+							}{4}
+						}{a}{}{5}\re{2}
+					}{6}\re{5}
+				}{7}\re{4}
+			}{8}
+\end{form}
 
 \begin{form}
 	f = \loflr{}{a}{}{1} \loflr{}{b}{\re{1}}{2}
@@ -10,10 +28,10 @@
 \begin{form}
 	f = \loflr{}{a}{}{1} \loftext{b}{2} \re{1}
 \end{form}
-
-\begin{form}
-	f = \lof{}{1}
-\end{form}
+%
+%\begin{form}
+%	f = \lof{}{1}
+%\end{form}
 	
 \begin{form}
 f = \lofc{}{}{1}
@@ -24,11 +42,44 @@ f = \lofc{}{}{1}
 \end{form}
 	
 \begin{form}
-f = \lofc{\re{1}}{a}{1}
+f = \lofc{
+		\re{1}
+		\loftext{a}{2}
+		\re{1}
+		\loftext{b}{3}
+		\re{1}
+	}{c}{1}
 \end{form}
 
 \begin{form}
-	f = \lofc{\lofc{\lofc{\re{2}}{a}{1}\re{3}}{b}{2}}{c}{3}
+	\loflr{\loflr{\loflr{\re{2}}{a}{}{1}\re{3}}{b}{}{2}}{c}{}{3}
+\end{form}
+
+\begin{form}
+	\re{3}
+	\lof{
+		\lofc{
+			\lofc{}{~}{1}\re{2}
+		}{~}{2}
+	}{3}
+\end{form}
+%
+%\begin{form}
+%	\lof{
+%		\loflr{
+%			\loflr{\re{3}}{~}{}{1}\re{2}
+%		}{~}{}{2}
+%	}{3}
+%\end{form}
+
+\begin{form}
+\lof{
+	\re{3}
+	\loflr{}{a}{}{1}
+	\loflr{}{b}{}{2}
+}{3}
+\loftext{c}{4}
+\re{2}
 \end{form}
 
 \begin{form}
