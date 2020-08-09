@@ -43,6 +43,10 @@
 % counter used in a while loop
 \newcounter{until}
 
+% counters used in cross-height determination
+\newcounter{maxheight}
+\newcounter{currentheight}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% INTERNAL ARRAYS - USED TO STORE STRUCTURAL INFORMATION %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -66,7 +70,7 @@
 \newarray\rentextarray
 
 %
-%\newarray\crossheightarray
+\newarray\crossheightarray
 %\newarray\crossheightarrayindex
 %\newcounter{crossheightcount}
 %\setcounter{crossheightcount}{0}
@@ -82,15 +86,15 @@
 %%% INTERNAL HELPER COMMANDS TO MANUPULATE ARRAYS %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\newcommand\enterCHA[1]{%
-%	CHC[\arabic{crossheightcount}]
-	[#1,\thecrossheightcount]
-	\expandarrayelementtrue
-	\crossheightarray(#1)={\the\value{crossheightcount}}%
-	\expandarrayelementfalse
-	\stepcounter{crossheightcount}%
-%	\crossheightarray(#1)
-}
+%\newcommand\enterCHA[1]{%
+%%	CHC[\arabic{crossheightcount}]
+%	[#1,\thecrossheightcount]
+%	\expandarrayelementtrue
+%	\crossheightarray(#1)={\the\value{crossheightcount}}%
+%	\expandarrayelementfalse
+%	\stepcounter{crossheightcount}%
+%%	\crossheightarray(#1)
+%}
 
 % commands to enter respective form elements into the orderarray
 \newcommand\enterOAL[1]{\orderarray(\theorderarraycount)={l#1}\stepcounter{orderarraycount}%
@@ -190,7 +194,8 @@ printCHA:
 \setcounter{loop}{1}
 \whiledo{\value{loop} < #1}%
 {%
-	\crossheightarray(\theloop)
+	\checkcrossheightarray(\theloop)
+	\text{(\theloop, \cachedata)}
 	\stepcounter{loop}%
 }
 \setcounter{loop}{0}
@@ -306,6 +311,44 @@ printCHA:
 %
 	% reset counter
 	\setcounter{loop}{1}
+	%
+	% run through Orderarray to determine the needed height for each cross
+	\whiledo{\value{loop} < \theorderarraycount}{%
+	\checkorderarray(\theloop)%
+	\StrLeft{\cachedata}{1}[\firstletter]%
+	\StrGobbleLeft{\cachedata}{1}[\lastletters]%
+	\IfStrEq{l}{\firstletter}{%true
+		\setcounter{moop}{\value{loop}}
+		\setcounter{maxheight}{0}
+		\setcounter{currentheight}{0}
+		\whiledo{\value{moop} < \theorderarraycount}{%
+			\checkorderarray(\themoop)%
+			\StrLeft{\cachedata}{1}[\firstletter]
+			\IfStrEq{l}{\firstletter}{%true
+				\stepcounter{currentheight}
+			}{%false
+			}
+			\IfStrEq{r}{\firstletter}{%true
+				\addtocounter{currentheight}{-1}
+			}{%false
+			}
+			\ifnum\value{currentheight}>\value{maxheight}{%
+				\setcounter{maxheight}{\thecurrentheight}
+			}\fi%
+			\stepcounter{moop}
+		}%
+		\expandarrayelementtrue
+		\crossheightarray(\lastletters)={\themaxheight}
+		\expandarrayelementfalse
+	}{%false
+	}%
+	\stepcounter{loop}
+	}%
+	% reset counters
+	\setcounter{loop}{1}
+	\setcounter{moop}{1}
+	\setcounter{maxheight}{0}
+	\setcounter{currentheight}{0}
 %
 	% check if there is at least one (left) node defined
 	\ifnodedefined{l\theloop}{%true
@@ -322,11 +365,12 @@ printCHA:
 	\tikz[overlay,remember picture] {
 		\whiledo{\value{until} > 0}%
 		{%
-			\draw[-] ([yshift=(\theloop-1) * \defaultspace]l\theloop)
-			-| ([yshift=(\theloop-1) * \defaultspace]r\theloop)
-			-| ++([yshift=(\theloop-1) * -\defaultspace]0em,0em)
-			-| ++(0,-0.1em);
 			\ifnodedefined{e\theloop1}{
+				\checkcrossheightarray(\theloop)
+				\draw[-] ([yshift=\cachedata * \defaultspace]l\theloop)
+				-| ([yshift=\cachedata * \defaultspace]r\theloop)
+				-| (r\theloop)
+				;
 				\setcounter{moop}{0}
 				\checkreentrycountarray(\theloop)
 				\whiledo{\value{moop} < \cachedata}{%
@@ -337,7 +381,10 @@ printCHA:
 					;
 				}
 			}{
-				\draw[-] (r\theloop)
+				\checkcrossheightarray(\theloop)
+				\draw[-] ([yshift=\cachedata * \defaultspace]l\theloop)
+				-| ([yshift=\cachedata * \defaultspace]r\theloop)
+				-| (r\theloop)
 				-| ++(0,-\defaultspace)
 				-| ++(0,-0.8em)
 				;
@@ -372,6 +419,7 @@ printCHA:
 \clrarray{textarrayindex}()
 \clrarray{textgap}()
 \clrarray{orderarray}()
+\clrarray{crossheightarray}()
 % I don't know why this is necessary here, but not in with any other arrays...
 \setcounter{loop}{1}
 \whiledo{\value{loop} < \theindexcount}{%
@@ -385,6 +433,8 @@ printCHA:
 \setcounter{indexcount}{1}
 \setcounter{heightcounter}{5}
 \setcounter{depthcounter}{0}
+\setcounter{maxheight}{1}
+\setcounter{currentheight}{1}
 }
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
