@@ -35,7 +35,6 @@
 
 % counter used for arithmetics in the reentrycountarray manipulation
 \newcounter{RCAhelper}
-
 % counters used in loops, needs to be (re-)set before usage
 \newcounter{loop}
 \newcounter{moop}
@@ -46,6 +45,10 @@
 % counters used in cross-height determination
 \newcounter{maxheight}
 \newcounter{currentheight}
+
+% counter used in reentry-height determination
+\newcounter{reentryheight}
+\newcounter{reentryseen}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% INTERNAL ARRAYS - USED TO STORE STRUCTURAL INFORMATION %%%
@@ -76,6 +79,9 @@
 %\setcounter{crossheightcount}{0}
 %\newcounter{crossheightarrayindexcount}
 %\setcounter{crossheightarrayindexcount}{1}
+
+\newarray\reentryseenarray
+\newarray\reentryheightarray
 
 % array used to count how many re-entries there are for each index, used for multi-re-entry feature
 \newarray\reentrycountarray
@@ -127,6 +133,15 @@
 	\fi
 	\expandarrayelementfalse%
 }
+
+% checks if given argument is an integer
+\newcommand*{\IsInteger}[3]{%
+	\IfStrEq{#1}{ }{%
+		#3% is a blank string
+	}{%
+		\IfInteger{#1}{#2}{#3}%
+	}%
+}%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% USER COMMANDS TO ENCODE FORMS %%%
@@ -229,6 +244,21 @@ printCHA:
 	}
 }
 
+% testing function that prints out the content of reentryheightarray
+\newcommand\printRHA{%
+	\footnote{\text{printRHA: }
+		\setcounter{loop}{1}
+		\whiledo{\value{loop} < \theindexcount}%
+		{%
+			\checkreentryheightarray(\theloop)
+			\text{(}\theloop\text{, }\cachedata\text{)}
+			\stepcounter{loop}%
+		}
+		\setcounter{loop}{1}
+	}
+}
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% INTERNAL COMMANDS FOR TIKZ NODE CREATION AND MANUPULATION %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -320,7 +350,7 @@ printCHA:
 	\IfStrEq{l}{\firstletter}{%true
 		\setcounter{moop}{\value{loop}}
 		\setcounter{maxheight}{0}
-		\setcounter{currentheight}{0}
+		\setcounter{currentheight}{-1}
 		\whiledo{\value{moop} < \theorderarraycount}{%
 			\checkorderarray(\themoop)%
 			\StrLeft{\cachedata}{1}[\firstletter]
@@ -350,6 +380,91 @@ printCHA:
 	\setcounter{maxheight}{0}
 	\setcounter{currentheight}{0}
 %
+	% initialize reentryseenarray
+	\whiledo{\value{loop} < \theorderarraycount}{%
+	\reentryseenarray(\theloop)={0}
+	\stepcounter{loop}
+	}%
+	\setcounter{loop}{1}
+%
+	% run through Orderarray to determine the neede height for each re-entry
+	\setcounter{reentryheight}{0}
+	\setcounter{reentryseen}{0}
+	\whiledo{\value{loop} < \theorderarraycount}{%
+	\checkorderarray(\theloop)%
+	\StrLeft{\cachedata}{1}[\firstletter]%
+	\StrGobbleLeft{\cachedata}{1}[\lastletters]%
+	\IfStrEq{r}{\firstletter}{%true
+%		test
+		\checkreentrycountarray(\lastletters)
+		\IsInteger{\cachedata}{%then
+			\ifnum\cachedata>0{%then
+				\checkreentryseenarray(\lastletters)
+				\StrGobbleLeft{\cachedata}{0}[\REseen]
+				\checkreentrycountarray(\lastletters)
+				\StrGobbleLeft{\cachedata}{0}[\REindex]
+				\ifnum\REseen=0{%then
+					\stepcounter{reentryheight}
+					\expandarrayelementtrue
+					\reentryheightarray(\lastletters)={\thereentryheight}
+					\checkreentryseenarray(\lastletters)
+					\setcounter{reentryseen}{\cachedata}
+					\stepcounter{reentryseen}
+					\reentryseenarray(\lastletters)={\thereentryseen}
+					\expandarrayelementfalse
+				}\else{%
+					\ifnum\thereentryseen<\REindex{%then
+						\expandarrayelementtrue
+						\checkreentryseenarray(\lastletters)
+						\setcounter{reentryseen}{\cachedata}
+						\stepcounter{reentryseen}
+						\reentryseenarray(\lastletters)={\thereentryseen}
+						\expandarrayelementfalse
+					}\else{%
+						\addtocounter{reentryheight}{-1}
+					}\fi%
+				}\fi%
+			}\fi%
+		}{%else
+		}
+	}{%false
+	}%
+	\IfStrEq{e}{\firstletter}{%true
+		\checkreentryseenarray(\lastletters)
+		\StrGobbleLeft{\cachedata}{0}[\REseen]
+		\checkreentrycountarray(\lastletters)
+		\StrGobbleLeft{\cachedata}{0}[\REindex]
+		\ifnum\REseen=0{%then
+			\stepcounter{reentryheight}
+			\expandarrayelementtrue
+			\reentryheightarray(\lastletters)={\thereentryheight}
+			\checkreentryseenarray(\lastletters)
+			\setcounter{reentryseen}{\cachedata}
+			\stepcounter{reentryseen}
+			\reentryseenarray(\lastletters)={\thereentryseen}
+			\expandarrayelementfalse
+		}\else{%
+			\ifnum\thereentryseen<\REindex{%then
+				\expandarrayelementtrue
+				\checkreentryseenarray(\lastletters)
+				\setcounter{reentryseen}{\cachedata}
+				\stepcounter{reentryseen}
+				\reentryseenarray(\lastletters)={\thereentryseen}
+				\expandarrayelementfalse
+			}\else{%
+				\addtocounter{reentryheight}{-1}
+			}\fi%
+		}\fi%
+	}{%false
+	}%
+	\stepcounter{loop}
+	}%
+	% reset counters
+	\setcounter{loop}{1}
+	\setcounter{reentryheight}{0}
+	\setcounter{reentryseen}{0}
+%
+\printRHA
 	% check if there is at least one (left) node defined
 	\ifnodedefined{l\theloop}{%true
 		\setcounter{until}{1}
@@ -367,16 +482,19 @@ printCHA:
 		{%
 			\ifnodedefined{e\theloop1}{
 				\checkcrossheightarray(\theloop)
+				
 				\draw[-] ([yshift=\cachedata * \defaultspace]l\theloop)
 				-| ([yshift=\cachedata * \defaultspace]r\theloop)
 				-| (r\theloop)
 				;
 				\setcounter{moop}{0}
+				\checkreentryheightarray(\theloop)
+				\StrGobbleLeft{\cachedata}{0}[\REheight]
 				\checkreentrycountarray(\theloop)
 				\whiledo{\value{moop} < \cachedata}{%
 					\stepcounter{moop}
 					\draw[-] (r\theloop)
-					-| ++(0,\theloop * -\defaultspace)
+					-| ++(0,\REheight * -\defaultspace)
 					-| ++(0,-1.0em) -| (e\theloop\themoop)
 					;
 				}
@@ -425,6 +543,16 @@ printCHA:
 \whiledo{\value{loop} < \theindexcount}{%
 	\clrarray{reentrycountarray}(\theloop)
 	\stepcounter{loop}
+}
+\setcounter{loop}{1}
+\whiledo{\value{loop} < \theindexcount}{%
+	\clrarray{reentryseenarray}(\theloop)
+	\stepcounter{loop}
+}
+\setcounter{loop}{1}
+\whiledo{\value{loop} < \theindexcount}{%
+\clrarray{reentryheightarray}(\theloop)
+\stepcounter{loop}
 }
 \setcounter{textarrayindexcount}{1}
 \setcounter{orderarraycount}{1}
