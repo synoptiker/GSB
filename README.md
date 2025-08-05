@@ -2,7 +2,7 @@
 
 A project based on the conjecture that a formal description of self-organization (notably, biological systems
 or communication) can be based on calculi nullifying the difference of operator and operands. The famous,
-semigraphical calculus of forms (aka calculus of indications) of George Spencer Brown, which identifies distinction
+semigraphical calculus of forms (aka calculus of indications) of George Spencer Brown (GSB), which identifies distinction
 as an operation (cross) with distinction as the result of an operation (separated spaces), is such a
 calculus. Receiving formal criticisms from the computer science community, it is nevertheless beneficial to see
 how the calculus can be used to describe systems, in particular, social (and socio-technical) systems. In the
