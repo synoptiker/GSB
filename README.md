@@ -1,4 +1,4 @@
-Tools for the Laws of Form
+# Tools for the Laws of Form
 
 A project based on the conjecture that a formal description of self-organization (notably, biological systems
 or communication) can be based on calculi nullifying the difference of operator and operands. The famous,
