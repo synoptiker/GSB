@@ -1,0 +1,760 @@
+\NeedsTeXFormat{LaTeX2e}[2022/06/01] %key-value (ltkeys in )
+\ProvidesPackage{formcalc}[2025/04/22 LaTeX package for the form calculus]
+\RequirePackage{graphicx}
+
+\newdimen\form@pos
+\newdimen\form@linethickness
+\newdimen\form@cross@pos
+\newdimen\form@highest@text
+\newdimen\form@lowest@vert@bound@top
+\newdimen\form@bottom
+
+\newcount\form@lastcommand
+\newcount\form@parent
+\newcount\form@index
+\newcount\form@cross@index@human
+\newcount\form@cross@prev@index
+\newcount\form@cross@level
+\newcount\form@cross@count
+\newcount\form@print@index
+\newcount\form@print@cross@index
+\newcount\form@vert@count
+\newcount\form@void@count
+\newcount\form@env@index
+\newcount\form@env@count                    \form@env@count=0
+
+\newif\if@form@cross@flush@
+
+\newbox\form@box
+\newbox\form@nothing
+\newbox\form@prev
+\newbox\form@number
+\newbox\form@tag
+\newbox\form@spacebox
+
+\def\form@cross@level@topdown@string{top down}
+\def\form@cross@level@bottomup@string{bottom up}
+
+%the index of the reentry at the specified position according to the priint order
+\def\form@reentry@index@get#1{\number#1}
+
+\def\form@defaults{%
+    \SetKeys[form@cross]{
+        left margin=0.4ex,
+        top margin=0.8ex,
+        right margin=0.6ex,
+        bottom margin=1ex,
+        separation=0.2ex,
+        linethickness=0.1ex,
+        number={
+            right margin=0.1ex,
+            scale=0.35,
+            visible=false,
+            display=\crosscolor\#
+        },
+        tag={
+            right margin=0ex,
+            left margin=0ex,
+            top margin=0.4ex,
+            bottom margin=0.8ex,
+            display=
+        },
+        name=\crosscolor h_\#,
+        color=,
+    }%
+    \SetKeys[form@bound]{
+        bottom margin=0.2ex,
+        visible=false,
+        width=1ex,
+        height=1ex,
+        multiline gap=0.4ex,
+        display=
+    }%
+    \SetKeys[form@void]{
+        frame=false,
+        width=1em,
+        height=1ex,
+    }%
+    \def\form@leveling{off}%
+}
+
+\DeclareKeys[form@env]{
+    cross.code=\SetKeys[form@cross]{#1},
+    bound.code=\SetKeys[form@bound]{#1},
+    void.code=\SetKeys[form@void]{#1},
+    leveling.store=\form@leveling,
+    default.code=\form@defaults,
+}
+\DeclareKeys[form@cross]{
+    left margin.store=\form@margin@left,
+    top margin.store=\form@margin@top,
+    right margin.store=\form@margin@right,
+    bottom margin.store=\form@margin@bottom,
+    separation.store=\form@crosssep,
+    linethickness.store=\form@linethickness@string,
+    number.code=\SetKeys[form@number]{#1},
+    tag.code=\SetKeys[form@tag]{#1},
+    name.store=\form@cross@name,
+    color.store=\form@cross@color,
+}
+\DeclareKeys[form@cross@direct]{
+    void width.store=\form@void@width,
+    void height.store=\form@void@height,
+    recursive.code=\SetKeys[form@env]{#1}\def\form@cross@recursive{#1},
+}
+\DeclareUnknownKeyHandler[form@cross@direct]{\SetKeys[form@cross]{#1={#2}}}
+\DeclareKeys[form@number]{
+    right margin.store=\form@margin@number@right,
+    scale.store=\form@number@scale,
+    visible.store=\form@number@visible,
+    visible.default:n=true,
+    display.store=\form@cross@number,
+}
+\DeclareUnknownKeyHandler[form@number]{\def\form@cross@number{#1}}
+\DeclareKeys[form@tag]{
+    right margin.store=\form@margin@tag@right,
+    left margin.store=\form@margin@tag@left,
+    top margin.store=\form@margin@tag@top,
+    bottom margin.store=\form@margin@tag@bottom,
+    display.store=\form@cross@tag,
+}
+\DeclareUnknownKeyHandler[form@tag]{\def\form@cross@tag{#1}}
+\DeclareKeys[form@bound]{
+    bottom margin.store=\form@margin@vert@bound@top,
+    visible.store=\form@bound@shown,
+    visible.default:n=true,
+    width.store=\form@bound@width,
+    height.store=\form@bound@height,
+    multiline gap.store=\form@bound@multiline@gap,
+    display.store=\form@bound@display,
+}
+\DeclareUnknownKeyHandler[form@bound]{\def\form@bound@display{#1}}
+\DeclareKeys[form@void]{
+    frame.store=\form@void@framed,
+    frame.default:n=true,
+    width.store=\form@void@width,
+    height.store=\form@void@height,
+}
+\form@defaults
+\ProcessKeyOptions[form@env]
+\newcommand{\formOptions}{}
+\def\formOptions[#1]{%
+    \expanded{\noexpand\SetKeys[form@env]{#1}}%
+}
+
+\def\form@end{\form@end}
+\def\form@nothing{}
+
+% custom array structure implementation
+\def\form@array@set#1[#2]=#3{\expandafter\xdef\csname\number\form@env@index @#1@\number#2\endcsname{\unexpanded\expandafter{#3}}}
+\def\form@array@setifnull#1[#2]=#3{\expanded{\noexpand\@ifundefined{\number\form@env@index @#1@\number#2}}{\form@array@set{#1}[{#2}]={#3}}{\begingroup\edef\@array@content{\unexpanded\expandafter\expandafter\expandafter{\csname\number\form@env@index @#1@\number#2\endcsname}}\ifx\@array@content\form@nothing\form@array@set{#1}[{#2}]={#3}\fi\endgroup}}
+\def\form@array@get#1[#2]{\unexpanded\expandafter\expandafter\expandafter{\csname\number\form@env@index @#1@\number#2\endcsname}}
+
+\InputIfFileExists{\jobname .form.aux}{}{\PackageNoteNoLine{formcalc}{You may need to run again for all functionality to work}}
+\newwrite\form@aux@out
+\immediate\openout\form@aux@out={\jobname .form.aux}
+
+\def\form@save{\edef\form@load{%
+    \global\form@pos=\the\form@pos%
+    %
+    \global\form@cross@count=\number\form@cross@count%
+    \global\form@cross@index@human=\number\form@cross@index@human%
+    \global\form@vert@count=\number\form@vert@count%
+    \global\form@void@count=\number\form@void@count%
+    \global\form@lastcommand=\number\form@lastcommand%
+    \global\form@env@index=\number\form@env@index%
+    \ifx\form@leveling\form@cross@level@bottomup@string\global\form@cross@level=\number\form@cross@level\fi%
+    \global\form@highest@text=\the\form@highest@text%
+    %
+    \global\form@lowest@vert@bound@top=\the\form@lowest@vert@bound@top%
+}}
+
+\NewDocumentEnvironment{form}{!O{}}{%
+    \unskip\space%
+    \begingroup%
+        \SetKeys[form@env]{#1}%
+        %
+        \form@save%
+        \def\cross{\form@cross}%
+        \def\bound{\form@bound}%
+        \def\void{\form@void}%
+        %
+        \ifmmode%
+            \def\form@math@open{\(}%
+            \def\form@math@close{\)}%
+        \else%
+            \def\form@math@open{}%
+            \def\form@math@close{}%
+        \fi%
+        %
+        \form@pos=0pt%
+        %
+        \global\form@env@index=\form@env@count%
+        \global\advance\form@env@count1%
+        \immediate\write\form@aux@out{\form@env@index=\number\form@env@index}%
+        %
+        \global\form@cross@count=0%
+        \global\form@cross@index@human=0%
+        \global\form@vert@count=0%
+        \global\form@void@count=0%
+        \global\form@lastcommand=0%
+        \expanded{\ifx\form@leveling\form@cross@level@bottomup@string\global\fi}\form@cross@level=0%
+        %
+        \form@array@setifnull{form@highest@text}[\number\form@env@index]={0px}%
+        \global\form@highest@text=0px%
+        \global\form@lowest@vert@bound@top=0ex%
+        %
+        \global\setbox\form@box=\hbox\bgroup%
+            \setbox\form@prev=\hbox\bgroup\ignorespaces\form@math@open}{\form@math@close\unskip\egroup%
+            \ifdim\wd\form@prev>0ex%
+                \setbox\form@spacebox=\hbox{\form@math@open\ \form@math@close}%
+                \ifcase\form@lastcommand%
+                    \ifdim\form@highest@text<\ht\form@prev%
+                        \global\form@highest@text=\ht\form@prev%
+                    \fi%
+                    \or\or%
+                    \global\advance\form@pos\wd\form@spacebox%
+                    \copy\form@spacebox%
+                \or%
+                    \global\advance\form@pos\wd\form@spacebox%
+                    \copy\form@spacebox%
+                    %
+                    \ifdim\form@highest@text<\ht\form@prev%
+                        \global\form@highest@text=\ht\form@prev%
+                    \fi%
+                \fi%
+                %
+                \global\advance\form@pos\wd\form@prev%
+                \global\advance\form@pos\wd\form@spacebox%
+                %
+                \box\form@prev%
+            \fi%
+        \egroup%
+        \immediate\write\form@aux@out{\noexpand\form@array@set{form@highest@text}[\number\form@env@index]={\the\form@highest@text}}%
+        \form@print%
+        \form@load%
+    \endgroup%
+    %
+    \immediate\write\form@aux@out{\form@env@index=\number\form@env@index}%
+    \space\ignorespacesafterend%
+}
+
+\newcommand{\form@cross}[2][]{%
+    \form@math@close\unskip\egroup%
+    \immediate\write\form@aux@out{\begingroup}%
+    \begingroup%
+        \form@index=\form@cross@count%
+        \global\advance\form@cross@count1%
+        %
+        \form@cross@keyval{#1}%
+        \expanded{\noexpand\SetKeys[form@env]{\form@array@get{form@cross@recursive}[\form@index]}}%
+        %
+        \form@array@setifnull{form@cross@index@human}[\form@index]={\number\form@index}%
+        %
+        \form@array@setifnull{form@cross@number@width}[\form@index]={0ex}%
+        \setbox\form@spacebox=\hbox{\form@math@open\ \form@math@close}%
+        \@form@cross@flush@false%
+        \ifdim\wd\form@prev>0ex\relax%
+            \ifcase\form@lastcommand\or%
+                \global\advance\form@pos\form@array@get{form@margin@left}[\form@parent]%
+                \hskip\form@array@get{form@margin@left}[\form@parent]%
+            \or%
+                \global\advance\form@pos\wd\form@spacebox%
+                \copy\form@spacebox%
+            \or%
+                \global\advance\form@pos\wd\form@spacebox%
+                \copy\form@spacebox%
+            \fi%
+            %
+            \global\advance\form@pos\wd\form@prev%
+            \global\advance\form@pos\wd\form@spacebox%
+            %
+            \box\form@prev%
+            \copy\form@spacebox%
+            %
+            \ifdim\form@highest@text<\ht\form@prev%
+                \global\form@highest@text=\ht\form@prev%
+            \fi%
+        \else%
+            \ifcase\form@lastcommand\or%
+                \@form@cross@flush@true%
+            \or%
+                \global\advance\form@pos\form@array@get{form@crosssep}[\form@index]%
+                \hskip\form@array@get{form@crosssep}[\form@index]%
+            \or%
+                \global\advance\form@pos\wd\form@spacebox%
+                \copy\form@spacebox%
+            \fi%
+        \fi%
+        \global\advance\form@pos\form@array@get{form@cross@number@width}[\form@index]%
+        \hskip\form@array@get{form@cross@number@width}[\form@index]%
+        \form@array@set{form@cross@number@width}[\form@index]={0ex}% make updates possible
+        %
+        \ifx\form@leveling\form@cross@level@topdown@string%
+            \form@array@set{form@cross@level}[\form@index]={\number\form@cross@level}%
+            \advance\form@cross@level1\relax%
+            \form@array@setifnull{form@cross@level@margin@max}[\form@cross@level]={0px}%
+            \ifdim\form@array@get{form@cross@level@margin@max}[\form@cross@level]>\dimexpr-\form@array@get{form@margin@top}[\form@index]\relax%
+                \form@array@set{form@cross@level@margin@max}[\form@cross@level]={\the\dimexpr-\form@array@get{form@margin@top}[\form@index]}%
+            \fi%
+        \fi%
+        %
+        \form@cross@pos=\form@pos%
+        \setbox\form@prev=\hbox{%
+            \form@lastcommand=1%
+            \form@parent=\form@index%
+            \setbox\form@prev=\hbox{\ignorespaces\form@math@open#2\form@math@close\unskip}%
+            \ifdim\wd\form@prev>0ex\relax%
+                \ifcase\form@lastcommand\or%
+                    \global\advance\form@pos\form@array@get{form@margin@left}[\form@parent]%
+                    \hskip\form@array@get{form@margin@left}[\form@parent]%
+                    %
+                    \ifdim\form@highest@text<\ht\form@prev%
+                        \global\form@highest@text=\ht\form@prev%
+                    \fi%
+                \or%
+                    \global\advance\form@pos\wd\form@spacebox%
+                    \copy\form@spacebox%
+                \or%
+                    \global\advance\form@pos\wd\form@spacebox%
+                    \copy\form@spacebox%
+                    %
+                    \ifdim\form@highest@text<\ht\form@prev%
+                        \global\form@highest@text=\ht\form@prev%
+                    \fi%
+                \fi%
+                %
+                \global\advance\form@pos\wd\form@prev%
+                %
+                \box\form@prev%
+            \else%
+                \ifcase\form@lastcommand\or%
+                    \global\advance\form@pos\form@array@get{form@margin@left}[\form@parent]%
+                    \hskip\form@array@get{form@margin@left}[\form@parent]%
+                    \global\advance\form@pos\form@array@get{form@void@width}[\form@index]%
+                    \hbox to \form@array@get{form@void@width}[\form@index]{\rule{0ex}{\form@array@get{form@void@height}[\form@index]}\hfill}%
+                \fi%
+            \fi%
+            %
+            \ifx\form@leveling\form@cross@level@bottomup@string%
+                \rule{0ex}{\form@array@get{form@highest@text}[\form@env@index]}%
+            \fi%
+        }%
+        \global\advance\form@cross@index@human1\relax%
+        \form@array@set{form@cross@index}[\form@cross@index@human]={\number\form@index}%
+        \immediate\write\form@aux@out{\noexpand\form@array@set{form@cross@index}[\number\form@cross@index@human]={\number\form@index}}%
+        \form@array@set{form@cross@index@human}[\form@index]={\number\form@cross@index@human}%
+        %
+        \ifcase\form@array@get{form@number@visible}[\form@index]\relax%
+            \def\crosscolor{}%
+            \setbox\form@number=\hbox{\scalebox{\expanded{\form@array@get{form@number@scale}[\form@index]}}{\form@math@open\form@array@get{form@cross@number}[\form@index]\form@math@close}}%
+            \ifdim\form@array@get{form@cross@number@width}[\form@index]<\dimexpr\wd\form@number+\form@array@get{form@margin@number@right}[\form@index]\relax%
+                \form@array@set{form@cross@number@width}[\form@index]={\the\dimexpr\wd\form@number+\form@array@get{form@margin@number@right}[\form@index]}%
+            \fi%
+        \else\fi%
+        \if@form@cross@flush@%
+            \ifdim\form@array@get{form@cross@number@width}[\form@parent]<\form@array@get{form@cross@number@width}[\form@index]%
+                \form@array@set{form@cross@number@width}[\form@parent]={\expanded{\form@array@get{form@cross@number@width}[\form@index]}}%
+            \fi%
+        \else%
+            \immediate\write\form@aux@out{\noexpand\form@array@set{form@cross@number@width}[\number\form@index]={\expanded{\form@array@get{form@cross@number@width}[\form@index]}}}%
+        \fi%
+        %
+        \form@array@set{form@cross@leftpos}[\form@index]={\the\form@cross@pos}%
+        \form@array@set{form@cross@length}[\form@index]={\the\dimexpr\wd\form@prev+\form@array@get{form@margin@right}[\form@index]}%
+        \form@array@set{form@cross@toppos}[\form@index]={\the\dimexpr\ht\form@prev+\form@array@get{form@margin@top}[\form@index]}%
+        \form@array@set{form@cross@vert}[\form@index]={\number\form@vert@count}%
+        %
+        \form@array@set{form@vert@depth}[\form@cross@index@human]={\the\dp\form@prev}%
+        \form@array@setifnull{form@reentry@start}[\form@cross@index@human]={\number\form@vert@count}%
+        \form@array@set{form@reentry@end}[\form@cross@index@human]={\number\form@vert@count}%
+        %
+        \form@array@set{form@vert@cross}[\form@vert@count]={\number\form@cross@index@human}%
+        \form@array@set{form@vert@toppos}[\form@vert@count]={\the\dimexpr\ht\form@prev+\form@array@get{form@margin@top}[\form@index]}%
+        %
+        \global\advance\form@pos\form@array@get{form@margin@right}[\form@index]%
+        %
+        \rule{0ex}{\dimexpr\ht\form@prev+\form@array@get{form@margin@top}[\form@index]\relax}%
+        \box\form@prev%
+        \hskip\form@array@get{form@margin@right}[\form@index]%
+        %
+        \form@array@set{form@vert@hpos}[\form@vert@count]={\the\dimexpr\form@pos-0.5\dimexpr\form@array@get{form@linethickness}[\form@index]}%
+        \global\advance\form@vert@count1%
+    \endgroup%
+    \immediate\write\form@aux@out{\endgroup}%
+    \form@lastcommand=2%
+    \setbox\form@prev=\hbox\bgroup\ignorespaces\form@math@open%
+}
+
+\def\form@cross@keyval#1{%
+    \begingroup%
+        \def\form@cross@recursive{}%
+        \SetKeys[form@cross@direct]{#1}%
+        \form@array@set{form@margin@left}[\form@index]={\form@margin@left}%
+        \form@array@set{form@margin@top}[\form@index]={\the\dimexpr\form@margin@top+\form@linethickness@string}%
+        \form@array@set{form@margin@right}[\form@index]={\the\dimexpr\form@margin@right+\form@linethickness@string}%
+        \form@array@set{form@margin@bottom}[\form@index]={\the\dimexpr\form@margin@bottom+\form@linethickness@string}%
+        \form@array@set{form@margin@number@right}[\form@index]={\form@margin@number@right}%
+        \form@array@set{form@margin@tag@right}[\form@index]={\form@margin@tag@right}%
+        \form@array@set{form@margin@tag@left}[\form@index]={\form@margin@tag@left}%
+        \form@array@set{form@margin@tag@top}[\form@index]={\form@margin@tag@top}%
+        \form@array@set{form@margin@tag@bottom}[\form@index]={\form@margin@tag@bottom}%
+        \form@array@set{form@crosssep}[\form@index]={\form@crosssep}%
+        \form@array@set{form@linethickness}[\form@index]={\form@linethickness@string}%
+        \form@array@set{form@void@width}[\form@index]={\form@void@width}%
+        \form@array@set{form@void@height}[\form@index]={\form@void@height}%
+        \form@array@setifnull{form@cross@number}[\form@index]={\form@cross@number}%
+        \immediate\write\form@aux@out{\noexpand\form@array@set{form@cross@number}[\number\form@index]={\unexpanded\expandafter{\expandafter\unexpanded\expandafter{\form@cross@number}}}}%
+        \form@array@set{form@number@scale}[\form@index]={\form@number@scale}%
+        \def\form@true{true}%
+        \form@array@set{form@number@visible}[\form@index]={\expanded{\ifx\form@number@visible\form@true0\else1\fi}}%
+        \form@array@setifnull{form@cross@tag}[\form@index]={\form@cross@tag}%
+        \immediate\write\form@aux@out{\noexpand\form@array@set{form@cross@tag}[\number\form@index]={\unexpanded\expandafter{\expandafter\unexpanded\expandafter{\form@cross@tag}}}}%
+        \form@array@setifnull{form@cross@name}[\form@index]={\form@cross@name}%
+        \immediate\write\form@aux@out{\noexpand\form@array@set{form@cross@name}[\number\form@index]={\unexpanded\expandafter{\expandafter\unexpanded\expandafter{\form@cross@name}}}}%
+        \form@array@setifnull{form@cross@color}[\form@index]={\form@cross@color}%
+        \immediate\write\form@aux@out{\noexpand\form@array@set{form@cross@color}[\number\form@index]={\form@cross@color}}%
+        \form@array@set{form@cross@recursive}[\form@index]={\form@cross@recursive}%
+    \endgroup%
+}
+
+\newcommand{\form@bound}[2][]{%
+    \form@math@close\unskip\egroup%
+    \begingroup%
+        \setbox\form@spacebox=\hbox{\form@math@open\ \form@math@close}%
+        \ifcase\form@lastcommand\or%
+            \global\advance\form@pos\form@array@get{form@margin@left}[\form@parent]%
+            \hskip\form@array@get{form@margin@left}[\form@parent]%
+        \or%
+            \global\advance\form@pos\wd\form@spacebox%
+            \copy\form@spacebox%
+        \or%
+            \global\advance\form@pos\wd\form@spacebox%
+            \copy\form@spacebox%
+        \fi%
+        \ifdim\wd\form@prev>0ex%
+            \global\advance\form@pos\wd\form@prev%
+            \global\advance\form@pos\wd\form@spacebox%
+            %
+            \box\form@prev%
+            \copy\form@spacebox%
+            %
+            \ifdim\form@highest@text<\ht\form@prev%
+                \global\form@highest@text=\ht\form@prev%
+            \fi%
+        \fi%
+        %
+        \def\form@end{\form@end}%
+        \def\form@nothing{}%
+        \def\form@vert@recursion##1,{\def\form@arg{##1}\expanded{\ifx\form@arg\form@end\else\ifx\form@arg\form@nothing\else\noexpand\form@vert@repeat{##1}\fi\noexpand\form@vert@recursion\fi}}%
+        %
+        \def\form@vert@repeat##1{%
+            \form@bound@keyval{#1}%
+            \def\form@last@content{##1}%
+            \global\setbox\form@prev=\hbox{%
+                \ifcase\form@array@get{form@bound@shown}[\form@vert@count]%
+                    \form@array@setifnull{form@cross@index}[##1]={0}%
+                    \form@array@setifnull{form@cross@bound}[\form@vert@count]={\expanded{\form@array@get{form@cross@name}[{\form@array@get{form@cross@index}[##1]}]}}%
+                    \form@array@setifnull{form@cross@bound}[\form@vert@count]={\crosscolor h_\#}%
+                    \edef\#{{%
+                        \edef\#{##1}%
+                        \form@array@get{form@cross@number}[\form@index]%
+                    }}%
+                    \form@array@setifnull{form@cross@color}[##1]={}%
+                    \edef\form@color{\form@array@get{form@cross@color}[##1]}%
+                    \def\crosscolor{\form@print@color}%
+                    {\form@math@open\form@array@get{form@cross@bound}[\form@vert@count]\form@math@close}%
+                \else%
+                    \hbox to \form@array@get{form@bound@width}[\form@vert@count]{\rule{0ex}{\form@array@get{form@bound@height}[\form@vert@count]}\hfill}%
+                \fi%
+            }%
+            %
+            \advance\form@vert@count1%
+        }%
+        {\form@vert@recursion#2,\form@end,}%
+        %
+        \def\form@vert@repeat##1{%
+            \form@array@setifnull{form@reentry@start}[##1]={\number\form@vert@count}%
+            \form@array@set{form@reentry@end}[##1]={\number\form@vert@count}%
+            %
+            \form@array@set{form@vert@cross}[\form@vert@count]={\number##1}%
+            \form@array@set{form@vert@toppos}[\form@vert@count]={\the\dimexpr-\form@array@get{form@margin@vert@bound@top}[\form@vert@count]-\dp\form@prev}%
+            \form@array@set{form@vert@hpos}[\form@vert@count]={\the\dimexpr\form@pos+0.5\wd\form@prev}%
+            \ifdim\form@lowest@vert@bound@top<\form@array@get{form@margin@vert@bound@top}[\form@vert@count]%
+                \form@lowest@vert@bound@top=\form@array@get{form@margin@vert@bound@top}[\form@vert@count]%
+            \fi%
+            %
+            \global\advance\form@vert@count1%
+        }%
+        \form@vert@recursion#2,\form@end,%
+        %
+        \ifdim\form@highest@text<\ht\form@prev%
+            \global\form@highest@text=\ht\form@prev%
+        \fi%
+        %
+        \global\advance\form@pos\wd\form@prev%
+        %
+        \box\form@prev%
+    \endgroup%
+    \form@lastcommand=3%
+    \setbox\form@prev=\hbox\bgroup\ignorespaces\form@math@open%
+}
+
+\def\form@bound@keyval#1{%
+    \begingroup%
+        \SetKeys[form@bound]{#1}%
+        \form@array@set{form@margin@vert@bound@top}[\form@vert@count]={\form@margin@vert@bound@top}%
+        \def\form@true{true}%
+        \form@array@set{form@bound@shown}[\form@vert@count]={\expanded{\ifx\form@bound@shown\form@true0\else1\fi}}%
+        \form@array@set{form@bound@width}[\form@vert@count]={\form@bound@width}%
+        \form@array@set{form@bound@height}[\form@vert@count]={\form@bound@height}%
+        \form@array@setifnull{form@cross@bound}[\form@vert@count]={\unexpanded\expandafter{\form@bound@display}}%
+        \immediate\write\form@aux@out{\noexpand\form@array@set{form@cross@bound}[\number\form@vert@count]={\unexpanded\expandafter{\expandafter\unexpanded\expandafter{\form@bound@display}}}}%
+        \form@array@set{form@bound@multiline@gap}[\form@vert@count]={\form@bound@multiline@gap}%
+    \endgroup%
+}
+
+\newcommand{\form@void}[1][]{%
+    \form@math@close\unskip\egroup%
+    \begingroup%
+        \setbox\form@spacebox=\hbox{\form@math@open\ \form@math@close}%
+        \ifcase\form@lastcommand\or%
+            \global\advance\form@pos\form@array@get{form@margin@left}[\form@parent]%
+            \hskip\form@array@get{form@margin@left}[\form@parent]%
+        \or%
+            \global\advance\form@pos\wd\form@spacebox%
+            \copy\form@spacebox%
+        \or%
+            \global\advance\form@pos\wd\form@spacebox%
+            \copy\form@spacebox%
+        \fi%
+        \ifdim\wd\form@prev>0ex%
+            \global\advance\form@pos\wd\form@prev%
+            \global\advance\form@pos\wd\form@spacebox%
+            %
+            \box\form@prev%
+            \copy\form@spacebox%
+            %
+            \ifdim\form@highest@text<\ht\form@prev%
+                \global\form@highest@text=\ht\form@prev%
+            \fi%
+        \fi%
+        \form@void@keyval{#1}%
+        \setbox\form@prev=\hbox{%
+            \ifcase\form@array@get{form@void@framed}[\form@void@count]%
+                \fboxsep = 0pt%
+                \fbox{\hbox to \form@array@get{form@void@width}[\form@void@count]{\rule{0ex}{\form@array@get{form@void@height}[\form@void@count]}\hfill}}%
+            \else%
+                \hbox to \form@array@get{form@void@width}[\form@void@count]{\rule{0ex}{\form@array@get{form@void@height}[\form@void@count]}\hfill}%
+            \fi%
+        }%
+        %
+        %
+        \global\advance\form@pos\wd\form@prev%
+        %
+        \box\form@prev%
+        %
+        \global\advance\form@void@count1%
+    \endgroup%
+    \form@lastcommand=3%
+    \setbox\form@prev=\hbox\bgroup\ignorespaces\form@math@open%
+}
+
+\def\form@void@keyval#1{%
+    \begingroup%
+        \expanded{\noexpand\SetKeys[form@void]{#1}}%
+        \def\form@true{true}%
+        \form@array@set{form@void@framed}[\form@void@count]={\expanded{\ifx\form@void@framed\form@true0\else1\fi}}%
+        \form@array@set{form@void@width}[\form@void@count]={\form@void@width}%
+        \form@array@set{form@void@height}[\form@void@count]={\form@void@height}%
+    \endgroup%
+}
+
+\def\form@print@inject{}% inject code from document
+
+\newcommand{\form@print}{%
+    \ifx\form@leveling\form@cross@level@topdown@string\else%
+        \def\form@print@leveling@calc{}%
+    \fi%
+    \form@print@leveling@calc%
+    %
+    \form@print@reentry@calc%
+    \mbox{%
+        \raise\dimexpr-\form@bottom\hbox{%
+            \setlength{\unitlength}{1pt}%
+            \begin{picture}(\wd\form@box,\ht\form@box+\form@bottom)
+                \put(0cm,\form@bottom){\hbox{%
+                    \unhcopy\form@box%
+                }}
+                \form@print@cross
+                \form@print@verts
+                \form@print@reentries
+                \form@print@inject
+            \end{picture}%
+        }%
+    }%
+}
+
+\newcommand{\form@print@leveling@calc}{%
+    \form@array@set{form@cross@level@margin@max}[0]={0px}%
+    \form@cross@level=1%
+    \loop%
+        \form@array@setifnull{form@cross@level@margin@max}[\form@cross@level]={}%
+        \edef\form@cross@level@margin@max{\form@array@get{form@cross@level@margin@max}[\form@cross@level]}%
+    \ifx\form@cross@level@margin@max\form@nothing\else%
+        \form@array@set{form@cross@level@margin@max}[\form@cross@level]={\the\dimexpr\form@array@get{form@cross@level@margin@max}[\form@cross@level]+\dimexpr\form@array@get{form@cross@level@margin@max}[\numexpr\form@cross@level-1]}%
+        \advance\form@cross@level1%
+    \repeat%
+    \advance\form@cross@level-1%
+    \edef\form@cross@level@max{\number\form@cross@level}%
+    \form@cross@level=0%
+    \loop\ifnum\form@cross@level>\form@cross@level@max\else%
+        \form@array@set{form@cross@level@margin@max}[\form@cross@level]={\the\dimexpr\form@array@get{form@cross@level@margin@max}[\form@cross@level]+\ht\form@box}%
+        \advance\form@cross@level1%
+    \repeat%
+    \form@index=0%
+    \loop\ifnum\form@index<\form@cross@count%
+        \form@array@set{form@cross@toppos}[\form@index]={\expanded{\form@array@get{form@cross@level@margin@max}[{\form@array@get{form@cross@level}[\form@index]}]}}%
+        \form@array@set{form@vert@toppos}[{\form@array@get{form@cross@vert}[\form@index]}]={\expanded{\form@array@get{form@cross@level@margin@max}[{\form@array@get{form@cross@level}[\form@index]}]}}%
+        \advance\form@index1%
+    \repeat%
+}
+
+\newcommand{\form@print@reentry@calc}{%
+    \global\form@bottom=\dp\form@box%
+    \form@print@cross@index=0%
+    \loop\ifnum\form@print@cross@index<\form@cross@count\relax%
+        \advance\form@print@cross@index1%
+        {%
+            \form@cross@index@human=\form@reentry@index@get\form@print@cross@index\relax%
+            \ifnum\form@array@get{form@reentry@start}[\form@cross@index@human]=\form@array@get{form@reentry@end}[\form@cross@index@human]\relax%
+                \form@array@set{form@reentry@vpos}[\form@cross@index@human]={\the\dimexpr\form@array@get{form@vert@depth}[\form@cross@index@human]}%
+            \else%
+                \form@print@index=1%
+                \form@cross@prev@index=0%
+                \loop\ifnum\form@print@index<\form@print@cross@index%
+                    \form@index=\form@reentry@index@get\form@print@index\relax%
+                    \ifdim \dimexpr\form@array@get{form@reentry@vpos}[\form@index]+\form@array@get{form@margin@bottom}[{\form@array@get{form@cross@index}[\form@cross@index@human]}]\relax>\form@array@get{form@tag@bottom}[\form@index]\relax%
+                        \edef\form@reentry@pot@pos{\dimexpr\form@array@get{form@reentry@vpos}[\form@index]+\form@array@get{form@margin@bottom}[{\form@array@get{form@cross@index}[\form@cross@index@human]}]\relax}%
+                    \else%
+                        \edef\form@reentry@pot@pos{\form@array@get{form@tag@bottom}[\form@index]}%
+                    \fi%
+                    \def\form@check@below{%
+                        \ifnum\form@array@get{form@reentry@start}[\form@index]=\form@array@get{form@reentry@end}[\form@index]\else%
+                        \ifnum\form@array@get{form@reentry@start}[\form@cross@index@human]>\form@array@get{form@reentry@end}[\form@index]\else%
+                        \ifnum\form@array@get{form@reentry@start}[\form@index]>\form@array@get{form@reentry@end}[\form@cross@index@human]\else%
+                            \form@cross@prev@index=\form@print@index%
+                            \edef\form@reentry@prev@pot@pos{\form@reentry@pot@pos}%
+                        \fi\fi\fi%
+                    }%
+                    \ifnum\form@cross@prev@index=0\relax%
+                        \form@check@below%
+                    \else\ifdim\form@reentry@pot@pos>\form@reentry@prev@pot@pos%
+                        \form@check@below%
+                    \fi\fi%
+                    \advance\form@print@index1%
+                \repeat%
+                \ifdim\dp\form@box>\form@lowest@vert@bound@top%
+                    \form@lowest@vert@bound@top=\dp\form@box%
+                \fi%
+                \ifnum\form@cross@prev@index=0\relax%
+                    \form@array@set{form@reentry@vpos}[\form@cross@index@human]={\the\dimexpr\dp\form@box+\form@array@get{form@margin@bottom}[{\form@array@get{form@cross@index}[\form@cross@index@human]}]}%
+                \else%
+                    \form@array@set{form@reentry@vpos}[\form@cross@index@human]={\the\dimexpr\form@reentry@pot@pos+\form@array@get{form@linethickness}[{\form@array@get{form@cross@index}[\form@cross@index@human]}]}%
+                \fi%
+                \form@print@tag@calc%
+                {\form@print@multiline}%
+                \ifdim\form@array@get{form@tag@bottom}[\form@cross@index@human]>\form@bottom%
+                    \global\form@bottom=\form@array@get{form@tag@bottom}[\form@cross@index@human]%
+                \fi%
+            \fi%
+        }%
+    \repeat%
+}
+
+\newcommand{\form@print@multiline}{%
+    \form@index=0%
+    \loop\ifnum\form@index<\form@vert@count%
+        \ifnum\form@array@get{form@vert@cross}[\form@index]=\form@cross@index@human%
+            \form@array@setifnull{form@print@hpos@vert}[{\dimexpr\form@array@get{form@vert@hpos}[\form@index]}]={}%
+            \edef\form@print@hpos@vert{\form@array@get{form@print@hpos@vert}[{\dimexpr\form@array@get{form@vert@hpos}[\form@index]}]}%
+            \ifx\form@print@hpos@vert\form@nothing\else%
+                \edef\form@print@multiline@gap{\form@array@get{form@bound@multiline@gap}[\form@index]}%
+                \ifx\form@print@multiline@gap\form@nothing\else%
+                    \form@array@set{form@vert@toppos}[\form@index]={\the\dimexpr-\form@array@get{form@reentry@vpos}[\form@print@hpos@vert]-\form@print@multiline@gap}%
+                \fi%
+            \fi%
+            \form@array@set{form@print@hpos@vert}[{\dimexpr\form@array@get{form@vert@hpos}[\form@index]}]={\number\form@cross@index@human}%
+        \fi%
+        \advance\form@index1%
+    \repeat%
+}
+
+\newcommand{\form@print@tag@calc}{%
+    \form@index=\form@array@get{form@cross@index}[\form@cross@index@human]%
+    %
+    \edef\form@width{\the\dimexpr\form@array@get{form@vert@hpos}[{\form@array@get{form@reentry@end}[\form@cross@index@human]}]-\form@array@get{form@vert@hpos}[{\form@array@get{form@reentry@start}[\form@cross@index@human]}]-\form@array@get{form@margin@tag@right}[\form@index]-\form@array@get{form@margin@tag@right}[\form@index]\relax}%
+    \form@array@set{form@tag@width}[\form@cross@index@human]={\form@width}%
+    \def\crosscolor{}%
+    \setbox\form@tag=\hbox{\parbox[b]{\form@width}{\raggedleft\form@array@get{form@cross@tag}[\form@index]}}%
+    \ifdim \wd\form@tag>0pt%
+        \form@array@set{form@tag@bottom}[\form@cross@index@human]={\the\dimexpr\form@array@get{form@reentry@vpos}[\form@cross@index@human]+\ht\form@tag+\dp\form@tag+\form@array@get{form@margin@tag@top}[\form@index]+\form@array@get{form@margin@tag@bottom}[\form@index]\relax}%
+    \else%
+        \form@array@set{form@tag@bottom}[\form@cross@index@human]={\the\dimexpr\form@array@get{form@reentry@vpos}[\form@cross@index@human]}%
+    \fi%
+}
+
+\newcommand{\form@print@color}{\expanded{\ifx\form@color\form@nothing\else\noexpand\color{\form@color}\fi}}
+
+\newcommand{\form@print@cross}{
+    \form@index=0
+    \loop\ifnum\form@index<\form@cross@count
+        \form@linethickness=\form@array@get{form@linethickness}[\form@index]
+        \linethickness{\form@linethickness}
+        \edef\form@color{\form@array@get{form@cross@color}[\form@index]}
+        \put(\dimexpr\form@array@get{form@cross@leftpos}[\form@index],\dimexpr\form@array@get{form@cross@toppos}[\form@index]+\form@bottom-0.5\form@linethickness)%
+            {\form@print@color\line(1,0){\dimexpr\form@array@get{form@cross@length}[\form@index]}}
+        \ifcase\form@array@get{form@number@visible}[\form@index]
+            \edef\#{\form@array@get{form@cross@index@human}[\form@index]}
+            \def\crosscolor{\form@print@color}
+            \setbox\form@number=\hbox{\expanded{\scalebox{\form@array@get{form@number@scale}[\form@index]}{\form@array@get{form@cross@number}[\form@index]}}}
+            \put(\dimexpr\form@array@get{form@cross@leftpos}[\form@index]-\wd\form@number-\form@array@get{form@margin@number@right}[\form@index],\dimexpr\form@array@get{form@cross@toppos}[\form@index]+\form@bottom-0.5\form@linethickness-0.5\ht\form@number-0.5\dp\form@number)%
+                {\box\form@number}
+        \fi
+        \advance\form@index1
+    \repeat
+}
+
+\newcommand{\form@print@verts}{
+    \form@index=0
+    \loop\ifnum\form@index<\form@vert@count
+        \form@linethickness=\form@array@get{form@linethickness}[{\form@array@get{form@cross@index}[{\form@array@get{form@vert@cross}[\form@index]}]}]
+        \linethickness{\form@linethickness}
+        \form@cross@index@human=\form@array@get{form@vert@cross}[\form@index]
+        \ifdim\form@array@get{form@vert@toppos}[\form@index]<\dimexpr-\form@array@get{form@reentry@vpos}[\form@cross@index@human]\relax
+            \form@array@set{form@vert@toppos}[\form@index]={\the\dimexpr-\form@array@get{form@reentry@vpos}[\form@cross@index@human]}
+        \fi
+        \edef\form@color{\form@array@get{form@cross@color}[{\form@array@get{form@cross@index}[{\form@array@get{form@vert@cross}[\form@index]}]}]}
+        \put(\dimexpr\form@array@get{form@vert@hpos}[\form@index],\dimexpr\form@array@get{form@vert@toppos}[\form@index]+\form@bottom)%
+            {\form@print@color\form@print@color\line(0,-1){\dimexpr\form@array@get{form@reentry@vpos}[\form@cross@index@human]+\dimexpr\form@array@get{form@vert@toppos}[\form@index]}}
+        \advance\form@index1
+    \repeat
+}
+
+\newcommand{\form@print@reentries}{
+    \form@index=0
+    \loop\ifnum\form@index<\form@cross@count
+        \advance\form@index1\relax
+        \form@linethickness=\form@array@get{form@linethickness}[{\form@array@get{form@cross@index}[\form@index]}]
+        \linethickness{\form@linethickness}
+        \edef\form@color{\form@array@get{form@cross@color}[{\form@array@get{form@cross@index}[\form@index]}]}
+        \put(\dimexpr\form@array@get{form@vert@hpos}[{\form@array@get{form@reentry@start}[\form@index]}],\dimexpr\form@bottom-\form@array@get{form@reentry@vpos}[\form@index]+0.5\form@linethickness)%
+            {\form@print@color\line(1,0){\dimexpr\form@array@get{form@vert@hpos}[{\form@array@get{form@reentry@end}[\form@index]}]-\form@array@get{form@vert@hpos}[{\form@array@get{form@reentry@start}[\form@index]}]}}
+        \ifnum \form@array@get{form@reentry@start}[\form@index]=\form@array@get{form@reentry@end}[\form@index]\else
+            \def\crosscolor{\form@print@color}
+            \setbox\form@tag=\hbox{\parbox[b]{\form@array@get{form@tag@width}[\form@index]}{\raggedleft\form@array@get{form@cross@tag}[{\form@array@get{form@cross@index}[\form@index]}]}}
+            \put(\dimexpr\form@array@get{form@vert@hpos}[{\form@array@get{form@reentry@start}[\form@index]}]+\form@array@get{form@margin@tag@left}[{\form@array@get{form@cross@index}[\form@index]}],\dimexpr\form@bottom-\form@array@get{form@tag@bottom}[\form@index]+\form@array@get{form@margin@tag@bottom}[{\form@array@get{form@cross@index}[\form@index]}]+\dp\form@tag)%
+                {\box\form@tag}
+        \fi
+    \repeat
+}

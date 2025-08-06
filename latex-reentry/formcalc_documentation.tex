@@ -1,0 +1,371 @@
+\documentclass[parskip=half-]{scrartcl}
+\usepackage{formcalc}
+\usepackage{enumitem}
+\usepackage[colorlinks=true,linkcolor=blue]{hyperref}
+\usepackage{cleveref}
+\usepackage{xcolor}
+\usepackage{framed}
+
+\title{formcalc documentation}
+\author{Ludwig Nittke}
+\date{June 2025}
+
+\begin{document}
+\lineskiplimit=0.8ex
+\lineskip=0.8ex
+
+\maketitle
+
+\tableofcontents
+
+\section{Introduction}
+
+The Form calculus is a semi graphical calculus. It consists of cross (\begin{form}\cross{}\end{form}), void (\begin{form}\void\end{form}) and variables. A variables is a names for any formula of the Form calculus. Variables can be divided into free and bound variables. Bound variables are variables that refer to a cross in the formula they are a part of (e.g.: (\(h_1=\begin{form}\cross{h_1}\end{form}\) is bound). They can be represented by the so called re-entry form (\(h_1=\begin{form}\cross{\bound[width=1em]{1}}\end{form}\)).
+
+This package provides a simple toolkit to draw these graphical formulas. It is designed to provide simple out of the box functionality while being as customizable as possible.
+
+This document contains a description of the environment and all the commands provided by the package including all possible options for customization. At the end it covers some tips and tricks for working with this package.
+
+\section{Options syntax}
+
+All options have to be given in the form \verb|key=value|. If the value contains "\verb|=|" or "\verb|,|" it has to be surrounded by curly braces. Some specific options can be given without key or value.
+
+All commands that take option do so with square braces. Thus if any option contains square closing braces, latex has to know which braces denote the end of the options. This can be given by additional curly braces inside the square ones (Example: \verb|\formOptions[{key=value with ] braces}]|).
+
+The options for the commands only modify the commands themselves unless stated otherwise.
+
+\section{Global options}
+
+The command \verb|\formOptions[]| can be used to set global options until the end of the current latex group. Global options can also be set using package options, but package options get expanded automatically by latex, thus it is not recommended, especially if the set values contain commands.
+
+\paragraph{input:}
+\begin{verbatim}
+\begin{form}
+    \cross{\cross{}}\cross{text}
+\end{form}
+\begin{form}[leveling=bottom up]
+    \cross{\cross{}}\cross{text}
+\end{form}
+\begin{form}[leveling=top down]
+    \cross{\cross{}}\cross{text}
+\end{form}
+\end{verbatim}
+
+\paragraph{output:}
+\begin{center}
+    \begin{form}
+        \cross{\cross{}}\cross{text}
+    \end{form}
+    \begin{form}[leveling=bottom up]
+        \cross{\cross{}}\cross{text}
+    \end{form}
+    \begin{form}[leveling=top down]
+        \cross{\cross{}}\cross{text}
+    \end{form}
+\end{center}
+
+\paragraph{Possible keys:}
+\begin{itemize}
+    \item \verb|cross|: a list of options as described in \cref{com:cross}
+    \item \verb|bound|: a list of options as described in \cref{com:bound}
+    \item \verb|void|: a list of options as described in \cref{com:void}
+    \item \verb|leveling|: one of \verb|top down|, \verb|bottom up| or \verb|off|; ensures that all crosses of the same level have the same height. \verb|top down| counts level from top to bottom, \verb|bottom up| the other way.
+    \item \verb|default|: restores default values; value will be ignored and is not mandatory
+\end{itemize}
+
+\section{Environment}
+
+\begin{framed}
+\verb|\begin{form}<content>\end{form}|\\
+\verb|\begin{form}[<options>]<content>\end{form}|
+\end{framed}
+
+
+Any formula has to be typed inside the \verb|form| environment. It provides all the commands of the package. Inside the environment everything gets rendered before it is added to the document. As consequences the formcalc commands cannot be surrounded (e.g. by external commands, environments, latex groups, etc.) and end a latex group (all declarations get deleted). Additionally some commands may not work (e.g. \verb|\label{}|).
+
+Possible options are the same as global options.
+
+The form environment preserves math mode. That means all its contents are in math mode if and only if the environment is in math mode. This includes numbers, names of bound variables and plain text. It does not include tags.
+
+\section{Commands}
+
+\subsection{Cross}
+\label{com:cross}
+
+\begin{framed}
+\verb|\cross{<content>}|\\
+\verb|\cross[<options>]{<content>}|
+\end{framed}
+
+\paragraph{input:}
+\begin{verbatim}
+\begin{form}
+    \cross[name=name]{\bound[visible]{1}}\cross{}
+\end{form}
+\end{verbatim}
+
+\makeatletter
+\def\form@print@inject{
+    \put(0,\dimexpr\form@bottom+0.5ex){\scalebox{0.2}{\color{red}\line(1,0){5\dimexpr\form@array@get{form@margin@left}[0]}}}
+    \put(-3,\dimexpr\form@bottom+0.6ex){\scalebox{0.1}{\color{red}left margin}}
+    \put(\form@array@get{form@vert@hpos}[0],\dimexpr\form@bottom+\form@array@get{form@cross@toppos}[0]){\scalebox{0.2}{\color{red}\line(0,-1){5\dimexpr\form@array@get{form@margin@top}[0]}}}
+    \put(\dimexpr\form@array@get{form@vert@hpos}[0]+0.3pt,\dimexpr\form@bottom+\form@array@get{form@cross@toppos}[0]-2pt){\scalebox{0.1}{\color{red}top margin}}
+    \put(\form@array@get{form@vert@hpos}[1],\dimexpr\form@bottom+0.5ex){\scalebox{0.2}{\color{red}\line(-1,0){5\dimexpr\form@array@get{form@margin@right}[0]}}}
+    \put(\dimexpr\form@array@get{form@vert@hpos}[1]-\form@array@get{form@margin@right}[0],\dimexpr\form@bottom+0.33ex){\scalebox{0.1}{\color{red}\parbox{10\dimexpr\form@array@get{form@margin@right}[0]}{right margin}}}
+    \put(\dimexpr\form@array@get{form@vert@hpos}[0]+3pt,\form@bottom){\scalebox{0.2}{\color{red}\line(0,-1){5\dimexpr\form@array@get{form@margin@bottom}[0]}}}
+    \put(\dimexpr\form@array@get{form@vert@hpos}[0]+3.2pt,\dimexpr0.5\form@bottom){\scalebox{0.1}{\color{red}bottom margin}}
+    \put(\form@array@get{form@vert@hpos}[1]+0.5\dimexpr\form@array@get{form@linethickness}[0],\dimexpr\form@bottom+\form@array@get{form@cross@toppos}[0]+0.5pt){\scalebox{0.2}{\color{red}\line(1,0){5\dimexpr\form@array@get{form@crosssep}[1]}}}
+    \put(\dimexpr\form@array@get{form@vert@hpos}[1]-0.4ex,\dimexpr\form@bottom+\form@array@get{form@cross@toppos}[0]+1pt){\scalebox{0.1}{\color{red}separation}}
+    \put(\dimexpr\form@array@get{form@cross@leftpos}[1]+\form@array@get{form@margin@left}[1],\form@bottom){\scalebox{0.2}{\color{red}\framebox(5\dimexpr\form@array@get{form@void@width}[1],5\dimexpr\form@array@get{form@void@height}[1]){}}}
+    \put(\dimexpr\form@array@get{form@cross@leftpos}[1]+\form@array@get{form@margin@left}[1]+2.7pt,\dimexpr\form@bottom+0.2pt){\scalebox{0.1}{\color{red}void width}}
+    \put(\dimexpr\form@array@get{form@cross@leftpos}[1]+\form@array@get{form@margin@left}[1]+0.2pt,\dimexpr\form@bottom+2pt){\scalebox{0.1}{\color{red}\parbox{0pt}{void height}}}
+}
+\makeatother
+
+\paragraph{output:}
+\begin{center}
+    \scalebox{5}{
+        \begin{form}
+            \cross[name=name]{\bound[visible]{1}}\cross{}
+        \end{form}
+    }
+\end{center}
+
+\paragraph{Possible keys for the command and the global options:}
+\begin{itemize}
+    \item \verb|left margin|
+    \item \verb|right margin|
+    \item \verb|top margin|
+    \item \verb|bottom margin|
+    \item \verb|separation|
+    \item \verb|linethickness|
+    \item \verb|number|: a list of options as described below
+    \item \verb|tag|: a list of options as described below
+    \item \verb|name|: the name of the cross as shown if the \verb|visible| option of the corresponding \verb|\bound{}| command is \verb|true|; the in \verb|number| determined displayed number can be used as \verb|\#|
+    \item \verb|color|: only possible, if package \verb|xcolor| is used; if not empty, \verb|\color{value}| gets added before the lines of that cross and is available as \verb|\crosscolor| in \verb|name|, \verb|number| and \verb|tag|
+\end{itemize}
+
+\paragraph{Possible keys for the command only:}
+\begin{itemize}
+    \item \verb|void width|: the width of the void inserted if this cross is empty
+    \item \verb|void height|: same as \verb|void width|
+    \item \verb|recursive|: global options for this cross and its contents
+\end{itemize}
+
+\paragraph{input:}
+\begin{verbatim}
+\begin{form}
+    \cross[number={visible,right margin=0.5ex}]{}
+\end{form}
+\end{verbatim}
+
+\makeatletter
+\def\form@print@inject{
+    \put(\form@array@get{form@cross@leftpos}[0],\dimexpr\form@bottom+\form@array@get{form@cross@toppos}[0]-0.6pt){\scalebox{0.1}{\color{red}\line(-1,0){10\dimexpr\form@array@get{form@margin@number@right}[0]}}}
+    \put(\dimexpr\form@array@get{form@cross@leftpos}[0]-\form@array@get{form@margin@number@right}[0],\dimexpr\form@bottom+\form@array@get{form@cross@toppos}[0]-1.1pt){\scalebox{0.05}{\color{red}right margin}}
+}
+\makeatother
+
+\paragraph{output:}
+\begin{center}
+    \scalebox{10}{
+        \begin{form}
+            \cross[number={visible,right margin=0.5ex}]{}
+        \end{form}
+    }
+\end{center}
+
+\paragraph{Possible keys for the number option:}
+\begin{itemize}
+    \item \verb|right margin|
+    \item \verb|scale|: the scale factor by which the number gets smaller
+    \item \verb|visible|: shows the number if \verb|true|; defaults to \verb|true| if no value is given
+    \item \verb|display|: the number that should be shown if \verb|visible| is \verb|true|; key is not mandatory unless that leads to ambiguity; the number that the cross gets by counting can be used as \verb|\#|; \verb|\#| is the number that is the input for the \verb|\bound{}| command.
+\end{itemize}
+
+\paragraph{input:}
+\begin{verbatim}
+\begin{form}
+    \cross[tag={\scriptsize tag,left margin=0.6ex,right margin=0.6ex}]
+    {\bound{2}\bound{1}text}\cross{}
+\end{form}
+\end{verbatim}
+
+\makeatletter
+\def\form@print@inject{
+    \put(\form@array@get{form@vert@hpos}[1],\dimexpr\form@bottom-\form@array@get{form@reentry@vpos}[1]-1ex){\scalebox{0.2}{\color{red}\line(1,0){5\dimexpr\form@array@get{form@margin@tag@left}[0]}}}
+    \put(\form@array@get{form@vert@hpos}[1],\dimexpr\form@bottom-\form@array@get{form@reentry@vpos}[1]-1ex-1pt){\scalebox{0.1}{\color{red}left margin}}
+    \put(\dimexpr0.5\dimexpr\form@array@get{form@vert@hpos}[1]+\form@array@get{form@vert@hpos}[2],\dimexpr\form@bottom-\form@array@get{form@reentry@vpos}[1]){\scalebox{0.2}{\color{red}\line(0,-1){5\dimexpr\form@array@get{form@margin@tag@top}[0]}}}
+    \put(\dimexpr0.2pt+0.5\dimexpr\form@array@get{form@vert@hpos}[1]+\form@array@get{form@vert@hpos}[2],\dimexpr\form@bottom-\form@array@get{form@reentry@vpos}[1]-1.2pt){\scalebox{0.1}{\color{red}top margin}}
+    \put(\form@array@get{form@vert@hpos}[2],\dimexpr\form@bottom-\form@array@get{form@reentry@vpos}[1]-1ex){\scalebox{0.2}{\color{red}\line(-1,0){5\dimexpr\form@array@get{form@margin@tag@right}[0]}}}
+    \put(\dimexpr\form@array@get{form@vert@hpos}[2]-\form@array@get{form@margin@tag@right}[0],\dimexpr\form@bottom-\form@array@get{form@reentry@vpos}[1]-1ex-1pt){\scalebox{0.1}{\color{red}right margin}}
+    \put(\dimexpr0.5\dimexpr\form@array@get{form@vert@hpos}[1]+\form@array@get{form@vert@hpos}[2],\dimexpr\form@bottom-\form@array@get{form@tag@bottom}[1]){\scalebox{0.2}{\color{red}\line(0,1){5\dimexpr\form@array@get{form@margin@tag@bottom}[0]}}}
+    \put(\dimexpr0.2pt+0.5\dimexpr\form@array@get{form@vert@hpos}[1]+\form@array@get{form@vert@hpos}[2],\dimexpr\form@bottom-\form@array@get{form@tag@bottom}[1]+1.2pt){\scalebox{0.1}{\color{red}bottom margin}}
+}
+\makeatother
+
+\paragraph{output:}
+\begin{center}
+    \scalebox{5}{
+        \begin{form}
+            \cross[tag={\scriptsize tag,left margin=0.6ex,right margin=0.6ex}]
+            {\bound{2}\bound{1}text}\cross{}
+        \end{form}
+    }
+\end{center}
+
+\paragraph{Possible keys for the tag option:}
+\begin{itemize}
+    \item \verb|left margin|
+    \item \verb|right margin|
+    \item \verb|top margin|
+    \item \verb|bottom margin|
+    \item \verb|display|: text to be shown below the re-entry of the cross; key is not mandatory unless that leads to ambiguity
+\end{itemize}
+
+\makeatletter
+\def\form@print@inject{}
+\makeatother
+
+\subsection{Bound variable}
+\label{com:bound}
+
+\begin{framed}
+\verb|\bound{<cross number>}|\\
+\verb|\bound[<options>]{<cross number>}|
+\end{framed}
+
+\verb|<cross number>| is a comma-separated list of at least one number\break referencing the corresponding cross. The numbers can be shown with the\break\verb|cross={number={visible,\#}}| global option. If the list is longer than one item, for the purpos of collision detection (e.g. margins between re-entries, counting of crossings, etc.) it is treated as a series of bound variables (e.g. \verb|\bound{2,1}| is the same as \verb|\bound{2}\bound{1}|).
+
+\paragraph{input:}
+\begin{verbatim}
+\begin{form}
+    \cross{\bound[bottom margin=0.6ex]{2,1}}\cross{}
+\end{form}
+\end{verbatim}
+
+\makeatletter
+\def\form@print@inject{
+    \put(\dimexpr\form@array@get{form@cross@leftpos}[0]+\form@array@get{form@margin@left}[0],\form@bottom){\scalebox{0.2}{\color{red}\framebox(5\dimexpr\form@array@get{form@bound@width}[0],5\dimexpr\form@array@get{form@bound@height}[0]){}}}
+    \put(\dimexpr\form@array@get{form@cross@leftpos}[0]+\form@array@get{form@margin@left}[0]+0.9pt,\dimexpr\form@bottom+\form@array@get{form@bound@height}[0]+0.3pt){\scalebox{0.1}{\color{red}width}}
+    \put(\dimexpr\form@array@get{form@cross@leftpos}[0]+\form@array@get{form@margin@left}[0]-3pt,\dimexpr\form@bottom+0.5\dimexpr\form@array@get{form@bound@height}[0]-0.4pt){\scalebox{0.1}{\color{red}height}}
+    \put(\dimexpr\form@array@get{form@vert@hpos}[1]-0.5pt,\form@bottom){\scalebox{0.2}{\color{red}\line(0,-1){5\dimexpr\form@array@get{form@margin@vert@bound@top}[1]}}}
+    \put(\dimexpr\form@array@get{form@vert@hpos}[1]-0.3pt,\dimexpr\form@bottom-1.6pt){\scalebox{0.1}{\color{red}\parbox{12ex}{bottom margin}}}
+    \put(\dimexpr\form@array@get{form@vert@hpos}[0]-0.5pt,\dimexpr\form@bottom+\form@array@get{form@vert@toppos}[0]){\scalebox{0.2}{\color{red}\line(0,1){5\dimexpr\form@array@get{form@bound@multiline@gap}[0]}}}
+    \put(\dimexpr\form@array@get{form@vert@hpos}[0]-0.3pt,\dimexpr\form@bottom+\form@array@get{form@vert@toppos}[0]+0.5pt){\scalebox{0.1}{\color{red}multiline gap}}
+}
+\makeatother
+
+\paragraph{output:}
+\begin{center}
+    \scalebox{5}{
+        \begin{form}
+            \cross{\bound[bottom margin=0.6ex]{2,1}}\cross{}
+        \end{form}
+    }
+\end{center}
+
+\makeatletter
+\def\form@print@inject{}
+\makeatother
+
+\paragraph{Possible keys for the bound command:}
+\begin{itemize}
+    \item \verb|bottom margin|
+    \item \verb|visible|: shows the variable name if \verb|true|; defaults to \verb|true| if no value is given
+    \item \verb|width|
+    \item \verb|height|
+    \item \verb|multiline gap|
+    \item \verb|display|: override the variable name; key is not mandatory unless that leads to ambiguity
+\end{itemize}
+
+\subsection{Void}
+\label{com:void}
+
+\paragraph{input:}
+\begin{verbatim}
+\begin{form}
+    \void[frame]
+\end{form}
+\end{verbatim}
+
+\makeatletter
+\def\form@print@inject{
+    \put(4,-1){\scalebox{0.1}{\color{red}width}}
+    \put(-3,2.3){\scalebox{0.1}{\color{red}height}}
+}
+\makeatother
+
+\paragraph{output:}
+\begin{center}
+    \scalebox{5}{
+        \begin{form}
+            \void[frame]
+        \end{form}
+    }
+\end{center}
+
+\paragraph{Possible keys for the void command:}
+\begin{itemize}
+    \item \verb|frame|: shows a frame around the void if \verb|true|; defaults to \verb|true| if no value is given
+    \item \verb|width|
+    \item \verb|height|
+\end{itemize}
+
+\makeatletter
+\def\form@print@inject{}
+\makeatother
+
+\section{Tips and tricks}
+\subsection{Commands in options}
+
+The content of the options gets copied as is. This allows options to include most commands.
+
+\paragraph{input:}
+\begin{verbatim}
+\begin{form}
+    \cross[name={\includegraphics[height=2em]{picture.png}}]{\bound
+    [visible]{1}}
+\end{form}
+\end{verbatim}
+\paragraph{output:}
+\begin{center}
+    \begin{form}
+        \cross[name={\includegraphics[height=2em]{picture.png}}]{\bound
+        [visible]{1}}
+    \end{form}
+\end{center}
+
+\subsection{Length units}
+
+Latex has many units to specify lengths. Popular ones are \texttt{mm}, \texttt{cm}, \texttt{in} and \texttt{pt}. Those units reference lengths in the resulting document.
+
+There are also units which reference font size. Those are \texttt{mu}, \texttt{ex} and \texttt{em}. One \texttt{mu} is $\frac{1}{18}$ \texttt{em} in math mode. As all lengths of this package are resolved during non-math mode this unit cannot be used. One \texttt{ex} is the height of \texttt{x} in the current font. One \texttt{em} is the height of \texttt{M} in the current font. The font referenced is the one at the beginning of the environment.
+
+\subsection{Spacing}
+
+In the form environment all space before and after commands is stripped and one space is added. This makes certain that newlines and spaces between commands don't add unwanted space, and ensures consistency between math mode and normal text. As an unfortunate side-effect commands like \verb|\hspace{}| or \verb|\hskip| don't work anymore.
+
+A solution is to use \verb|\makebox[]{}| and \verb|\rule{}{}|. The command \hfil\break\verb|\makebox[<width>]{\rule{0pt}{<height>}\hfill}| produces a box that only contains space but is of the given dimensions and gets treated as any other box (e.g. picture, character, table, etc.).
+
+\subsection{Spacing between lines}
+
+Latex tries to make the space between baselines \verb|\baselineskip| wide. This dimension depends on font and font size. If the actual space between lines is smaller than \verb|\lineskiplimit|, space is added to make it \verb|\lineskip| wide. To set a consistent minimum spacing between lines both have to be modified:
+\begin{verbatim}
+\lineskip=0.8ex
+\lineskiplimit=0.8ex
+\end{verbatim}
+
+\subsection{Output values}
+
+Use \verb|\the| to show current values:
+\begin{verbatim}
+\the\lineskip
+\end{verbatim}
+
+Use \verb|\message{}| to print to the log:
+\begin{verbatim}
+\message{\the\lineskip}
+\end{verbatim}
+
+\end{document}
