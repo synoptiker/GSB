@@ -1,1 +1,1 @@
-A LaTeX package for setting re-entry forms of GSB's calculus smoothly (see [Documentation](https://github.com/synoptiker/GSB/latex-reentry/formcalc_documentation.pdf)). Created by [Luni2000](https://github.com/Luni2000), 2025.
+A LaTeX package for setting re-entry forms of GSB's calculus smoothly (see [Documentation](https://github.com/synoptiker/GSB/latex-reentry/formcalc_documentation)). Created by [Luni2000](https://github.com/Luni2000), 2025.
