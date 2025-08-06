@@ -4,4 +4,4 @@ A project based on the conjecture that a formal description of self-organization
 1. In the application-oriented part of the project, several tools are designed and implemented to support field work with Spencer Brown’s forms: automated and interactive tools for generating layouts of re-entry forms while optimizing the layout according to several criteria (like planarity or minimizing crossings) and apps understanding forms drawn on a tablet and generating code out of it.
 2. Building on previous research in complexity theory and dynamical systems, the theoretical part of the project is devoted to a complete form analysis and form synthesis. Existing studies only consider simple re-entry forms with just one re-entry.
    
-Here you can find project-related software packages (e.g., LaTeX) and reports on the progress of the project.
+Here you can find project-related software packages (e.g., LaTeX) as well as reports on the progress of the project.
