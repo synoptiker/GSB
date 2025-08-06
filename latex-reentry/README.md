@@ -1,1 +1,1 @@
-Ich habe einen thread für Komunikation im Discussions tab gestartet
+A LaTeX package for reentry forms of George Spencer Brown's Laws of Form. For usage, see the documentation. Created by [Luni2000]().
